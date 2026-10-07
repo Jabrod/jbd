@@ -471,20 +471,21 @@ impl Preferences {
 }
 
 /// The per-user data directory (`FILMCRAFT_DATA_DIR` overrides):
-/// macOS `~/Library/Application Support/FilmCraft`, Windows `%APPDATA%\FilmCraft`,
-/// elsewhere `$XDG_DATA_HOME/filmcraft` or `~/.local/share/filmcraft`.
+/// macOS `~/Library/Application Support/JBD`, Windows `%APPDATA%\JBD`,
+/// elsewhere `$XDG_DATA_HOME/jbd` or `~/.local/share/jbd`. (JBD keeps its data apart from a
+/// FilmCraft install on the same computer.)
 pub fn default_data_dir() -> Option<PathBuf> {
     let env = |k: &str| std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from);
     if let Some(d) = env("FILMCRAFT_DATA_DIR") {
         return Some(d);
     }
     if cfg!(target_os = "macos") {
-        return env("HOME").map(|h| h.join("Library/Application Support/FilmCraft"));
+        return env("HOME").map(|h| h.join("Library/Application Support/JBD"));
     }
     if cfg!(windows) {
-        return env("APPDATA").map(|h| h.join("FilmCraft"));
+        return env("APPDATA").map(|h| h.join("JBD"));
     }
-    env("XDG_DATA_HOME").map(|d| d.join("filmcraft")).or_else(|| env("HOME").map(|h| h.join(".local/share/filmcraft")))
+    env("XDG_DATA_HOME").map(|d| d.join("jbd")).or_else(|| env("HOME").map(|h| h.join(".local/share/jbd")))
 }
 
 pub fn unix_now() -> i64 {

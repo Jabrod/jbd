@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ThemeKind {
-    /// Premiere-style darkest (default).
+    /// JBD black (default).
     #[default]
     Dark,
     /// Slightly lighter grey panels (Premiere's brightness slider mid position).
@@ -100,49 +100,63 @@ pub struct Tokens {
 
 impl Tokens {
     pub fn for_kind(kind: ThemeKind) -> Self {
-        // Measured from Premiere 26 "Darkest" (plan/premiere/02-ui-ux.md §1).
+        // JBD's black-and-white theme (the Jabrod tokens from the old app's src/styles.css).
+        // Greys carry the UI; the logo's violet / blue / cyan appear only where something needs
+        // to be seen: selection and focus (blue), values you can drag and timecode (cyan).
+        // JBD palette, named once so the token list below reads like the old CSS:
+        let black = Color32::from_rgb(0x0b, 0x0b, 0x0c); // --jbd-black: the window background
+        let panel = Color32::from_rgb(0x11, 0x11, 0x13); // --jbd-panel
+        let raised = Color32::from_rgb(0x18, 0x18, 0x1b); // --jbd-raised: inputs, cards, menus
+        let hover = Color32::from_rgb(0x23, 0x23, 0x27); // --jbd-hover
+        let line = Color32::from_rgb(0x26, 0x26, 0x2b); // --jbd-line: hairlines
+        let line_strong = Color32::from_rgb(0x3b, 0x3b, 0x42); // --jbd-line-strong
+        let white = Color32::from_rgb(0xf4, 0xf4, 0xf5); // --jbd-white: main text, the playhead
+        let grey = Color32::from_rgb(0x9b, 0x9b, 0xa3); // --jbd-grey: secondary text
+        let faint = Color32::from_rgb(0x5f, 0x5f, 0x68); // --jbd-faint: hints, disabled
+        let blue = Color32::from_rgb(0x3d, 0x5c, 0xff); // --jbd-blue: the logo's middle
+        let cyan = Color32::from_rgb(0x00, 0xd4, 0xfa); // --jbd-cyan: the logo's timeline face
         let dark = Tokens {
             kind,
-            app_bg: Color32::from_rgb(0, 0, 0),
-            header_bg: Color32::from_rgb(0x1d, 0x1d, 0x1d),
-            panel_bg: Color32::from_rgb(0x1d, 0x1d, 0x1d),
-            tab_bg: Color32::from_rgb(0x1d, 0x1d, 0x1d),
-            tab_text: Color32::from_rgb(0xb0, 0xb0, 0xb0),
-            tab_text_active: Color32::from_rgb(0xd1, 0xd1, 0xd1),
-            focus: Color32::from_rgb(0x57, 0x94, 0xec),
-            accent: Color32::from_rgb(0x2f, 0x6b, 0xdf),
-            accent_hover: Color32::from_rgb(0x3f, 0x7c, 0xe8),
-            text: Color32::from_rgb(0xd1, 0xd1, 0xd1),
-            text_dim: Color32::from_rgb(0xb0, 0xb0, 0xb0),
-            text_faint: Color32::from_rgb(0x6e, 0x6e, 0x6e),
-            icon: Color32::from_rgb(0xb0, 0xb0, 0xb0),
-            icon_active: Color32::from_rgb(0xd1, 0xd1, 0xd1),
-            hover: Color32::from_rgb(0x2c, 0x2c, 0x2c),
-            pressed: Color32::from_rgb(0x4b, 0x4b, 0x4b),
-            field_bg: Color32::from_rgb(0x0e, 0x0e, 0x0e),
-            field_border: Color32::from_rgb(0x30, 0x30, 0x30),
-            separator: Color32::from_rgb(0x30, 0x30, 0x30),
-            row_alt: Color32::from_rgb(0x21, 0x21, 0x21),
-            row_selected: Color32::from_rgb(0x33, 0x33, 0x33),
-            hot_text: Color32::from_rgb(0x57, 0x94, 0xec),
-            tl_bg: Color32::from_rgb(0x1d, 0x1d, 0x1d),
-            tl_track_bg: Color32::from_rgb(0x1d, 0x1d, 0x1d),
-            tl_track_bg_alt: Color32::from_rgb(0x1d, 0x1d, 0x1d),
-            tl_header_bg: Color32::from_rgb(0x1d, 0x1d, 0x1d),
-            tl_ruler_bg: Color32::from_rgb(0x1d, 0x1d, 0x1d),
-            tl_ruler_tick: Color32::from_rgb(0x8d, 0x8d, 0x8d),
-            tl_ruler_text: Color32::from_rgb(0xb0, 0xb0, 0xb0),
-            playhead: Color32::from_rgb(0x58, 0x95, 0xec),
-            in_out_shade: Color32::from_rgb(0x3f, 0x3f, 0x3f),
-            clip_selected_border: Color32::from_rgb(0xeb, 0xeb, 0xeb),
-            render_red: Color32::from_rgb(0xe3, 0x48, 0x50),
-            render_yellow: Color32::from_rgb(0xf0, 0xf0, 0x4f),
-            render_green: Color32::from_rgb(0x2d, 0x9d, 0x78),
-            monitor_bg: Color32::from_rgb(0x1d, 0x1d, 0x1d),
-            timecode: Color32::from_rgb(0x57, 0x94, 0xec),
-            danger: Color32::from_rgb(0xdc, 0x51, 0x3d),
+            app_bg: black,
+            header_bg: black,
+            panel_bg: panel,
+            tab_bg: panel,
+            tab_text: grey,
+            tab_text_active: white,
+            focus: Color32::from_rgb(0xd4, 0xd4, 0xd8), // --ring: a light frame, not a colour
+            accent: blue,
+            accent_hover: Color32::from_rgb(0x56, 0x72, 0xff),
+            text: white,
+            text_dim: grey,
+            text_faint: faint,
+            icon: grey,
+            icon_active: white,
+            hover,
+            pressed: line_strong,
+            field_bg: raised,
+            field_border: line_strong,
+            separator: line,
+            row_alt: Color32::from_rgb(0x15, 0x15, 0x17),
+            row_selected: hover,
+            hot_text: cyan,
+            tl_bg: panel,
+            tl_track_bg: panel,
+            tl_track_bg_alt: panel,
+            tl_header_bg: panel,
+            tl_ruler_bg: panel,
+            tl_ruler_tick: faint,
+            tl_ruler_text: grey,
+            playhead: white,
+            in_out_shade: Color32::from_rgb(0x2a, 0x2a, 0x30),
+            clip_selected_border: white,
+            render_red: Color32::from_rgb(0xff, 0x3b, 0x3b),    // --jbd-red
+            render_yellow: Color32::from_rgb(0xf5, 0xb4, 0x00), // --jbd-amber
+            render_green: Color32::from_rgb(0x16, 0xc9, 0x6f),  // --jbd-green
+            monitor_bg: black,
+            timecode: cyan,
+            danger: Color32::from_rgb(0xff, 0x3b, 0x3b),
             radius: 0.0,
-            radius_sm: 4.0,
+            radius_sm: 6.0,
             gap: 4.0,
             tab_h: 32.0,
         };

@@ -1,0 +1,8 @@
+asset:        jbd-icon-256.png
+title:        JBD app icon, 256 px full-bleed tile
+author:       Jabrod (Anshuman), for JBD
+source:       original work (the JBD logo, carried over from the first, Tauri-based JBD app)
+license:      LicenseRef-Jabrod-Trademark; JBD name and logo are trademarks of Jabrod, not open source, not covered by MIT OR Apache-2.0
+license-file: assets/jbd/LICENSE-brand.txt
+added:        2026-10-07
+notes:        Window and taskbar icon (apps/filmcraft/src/main.rs).

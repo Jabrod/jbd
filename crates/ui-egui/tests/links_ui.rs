@@ -1,5 +1,5 @@
-//! Headless UI test of the community links: Help menu commands, the header Discord button, the
-//! About dialog and the Home (Import) screen.
+//! Headless UI test of JBD's links: Help menu commands, the About dialog and the Home (Import)
+//! screen, and that no ArtCraft community button is left in the header.
 //!
 //! Set `FILMCRAFT_UI_SNAPSHOT_DIR=<dir>` to also render the window offscreen with wgpu and write
 //! `links-*.png` there; without it no GPU is needed.
@@ -78,7 +78,7 @@ impl Driver {
 }
 
 #[test]
-fn community_links_everywhere() {
+fn jbd_links_everywhere() {
     let mut d = Driver::demo();
     // Help menu: every link is a command that reports the URL it opened.
     for (id, _, url) in links::ALL {
@@ -90,25 +90,25 @@ fn community_links_everywhere() {
     for (id, label, _) in links::ALL {
         assert!(text.contains(id) && text.contains(label), "Help menu lists {id}");
     }
-    // Header: the Discord button is always there.
-    assert_eq!(d.ids("header.discord"), vec!["header.discord".to_string()]);
+    // Header: FilmCraft's Discord button is gone (ArtCraft marks are not licensed to forks).
+    assert!(d.ids("header.discord").is_empty());
     d.snapshot("header");
-    // About dialog: Discord first, then website, app page, GitHub, issues.
+    // About dialog: JBD's page first, then support, jabrod.com and the FilmCraft credit.
     d.ok("engine.execute", json!({"command": "app.about", "params": {}}));
     d.frames(3);
     let about = d.ids("about.");
-    for id in ["about.discord", "about.website", "about.appPage", "about.github", "about.reportIssue"] {
+    for id in ["about.appPage", "about.support", "about.website", "about.filmcraft"] {
         assert!(about.iter().any(|a| a == id), "{id} in {about:?}");
     }
     d.snapshot("about");
     d.ok("ui.key", json!({"key": "Escape"}));
     d.frames(3);
     assert!(d.ids("about.").is_empty(), "Escape closes About");
-    // Home screen (Import mode): community links.
+    // Home screen (Import mode): the same links.
     d.ok("engine.execute", json!({"command": "mode.import", "params": {}}));
     d.frames(3);
     let home = d.ids("import.link.");
-    for id in ["import.link.discord", "import.link.website", "import.link.appPage", "import.link.github"] {
+    for id in ["import.link.appPage", "import.link.support", "import.link.website", "import.link.filmcraft"] {
         assert!(home.iter().any(|a| a == id), "{id} in {home:?}");
     }
     d.snapshot("home");

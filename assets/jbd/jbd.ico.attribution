@@ -1,0 +1,8 @@
+asset:        jbd.ico
+title:        JBD app icon, Windows .ico (16-256 px)
+author:       Jabrod (Anshuman), for JBD
+source:       original work (the JBD logo, carried over from the first, Tauri-based JBD app)
+license:      LicenseRef-Jabrod-Trademark; JBD name and logo are trademarks of Jabrod, not open source, not covered by MIT OR Apache-2.0
+license-file: assets/jbd/LICENSE-brand.txt
+added:        2026-10-07
+notes:        Embedded in jbd.exe by apps/filmcraft/build.rs. Taskbar-sized frames are cropped to fill the square (see the first JBD app, scripts/make-ico.mjs).

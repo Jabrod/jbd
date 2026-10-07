@@ -1,0 +1,9 @@
+JBD brand assets: license
+
+The JBD name, the JBD cube logo and every file in this directory (in every colour, size and format)
+are trademarks of Jabrod. All rights reserved. They are not open source: the MIT OR Apache-2.0
+licence that covers the FilmCraft code in this repository does not apply to them, and nothing in
+that licence or in any other file of this repository grants any right to them.
+
+They may be used only in official JBD builds and materials published by Jabrod. Anyone who
+distributes a modified version of this code must remove them and must not call that version JBD.

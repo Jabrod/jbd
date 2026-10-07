@@ -1,11 +1,17 @@
 [package]
 name = "filmcraft"
-description = "FilmCraft desktop app"
+description = "JBD, AI video editor by Jabrod (desktop app)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-default-run = "filmcraft"
+default-run = "jbd"
 build = "build.rs"
+
+# The package keeps its upstream name (filmcraft) so merges from FilmCraft stay easy; the program
+# it builds is jbd.exe.
+[[bin]]
+name = "jbd"
+path = "src/main.rs"
 
 [lints]
 workspace = true
@@ -35,6 +41,6 @@ objc2 = "0.6"
 # Same winit as eframe: macOS event-loop options (no app activation when driven by an agent).
 winit = { version = "0.30", default-features = false }
 
-# Icon + VERSIONINFO for filmcraft.exe (build.rs); only needed when building on Windows.
+# Icon + VERSIONINFO for jbd.exe (build.rs); only needed when building on Windows.
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"

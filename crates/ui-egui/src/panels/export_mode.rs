@@ -303,7 +303,7 @@ fn combo(ui: &mut egui::Ui, reg: &mut Reg, id: &str, selected: &str, options: &[
     let r = egui::ComboBox::from_id_salt(id).selected_text(selected).width(width).show_ui(ui, |ui| {
         for (i, (label, enabled)) in options.iter().enumerate() {
             let resp = ui.add_enabled(*enabled, egui::Button::selectable(label == selected, label));
-            let resp = if *enabled { resp } else { resp.on_disabled_hover_text("Not supported by FilmCraft's encoders yet") };
+            let resp = if *enabled { resp } else { resp.on_disabled_hover_text("Not supported by JBD's encoders yet") };
             reg.add(format!("{id}.option.{i}"), resp.rect, label.clone());
             if resp.clicked() {
                 chosen = Some(i);

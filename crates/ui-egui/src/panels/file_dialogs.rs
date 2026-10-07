@@ -53,9 +53,9 @@ pub fn show_recovery(app: &mut FilmcraftApp, ctx: &egui::Context) -> bool {
             let name = c["projectName"].as_str().unwrap_or("Untitled");
             let when = c["savedAt"].as_str().unwrap_or("");
             let why = if c["cleanExit"].as_bool() == Some(true) {
-                format!("FilmCraft was closed while “{name}” had unsaved changes.")
+                format!("JBD was closed while “{name}” had unsaved changes.")
             } else {
-                format!("FilmCraft quit unexpectedly while “{name}” had unsaved changes.")
+                format!("JBD quit unexpectedly while “{name}” had unsaved changes.")
             };
             ui.label(RichText::new(why).size(13.5).color(t.text));
             ui.add_space(4.0);

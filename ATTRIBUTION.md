@@ -121,23 +121,18 @@ carry each font's licence as `OFL-<family>.txt`.
 | Shippori Mincho Regular (FONTDASU) | Japanese fallback for serif titles (native builds) | OFL-1.1 |
 | BIZ UDMincho Regular (Morisawa) | Japanese fallback for serif titles (native builds) | OFL-1.1 |
 
-## First-party brand marks
+## First-party brand marks (JBD)
 
-The ArtCraft name, wordmark and logos are trademarks of the ArtCraft Team. They are not open source and
-are not covered by the project licence; they may be used only unmodified and only in the context of
-FilmCraft, under [`docs/brand/LICENSE-brand.txt`](docs/brand/LICENSE-brand.txt). Forks and modified versions must
-remove them (AGENTS.md §1.8).
+The JBD name and the JBD cube logo are trademarks of Jabrod. They are not open source and are not
+covered by the MIT OR Apache-2.0 licence of the FilmCraft code; see
+[`assets/jbd/LICENSE-brand.txt`](assets/jbd/LICENSE-brand.txt). This fork carries none of the ArtCraft
+marks: FilmCraft's brand licence requires forks to remove them.
 
 | File | Author | Source | Licence |
 |---|---|---|---|
-| `docs/brand/artcraft-logo-white.png` | ArtCraft Team | Original work: first-party ArtCraft brand mark (ArtCraft wordmark, light ink for dark backgrounds) | ArtCraft trademark, not open source; `docs/brand/LICENSE-brand.txt` (not MIT/Apache) |
-| `docs/brand/artcraft-logo-white.svg` | ArtCraft Team | Original work: first-party ArtCraft brand mark (ArtCraft wordmark, light ink for dark backgrounds) | ArtCraft trademark, not open source; `docs/brand/LICENSE-brand.txt` (not MIT/Apache) |
-| `docs/brand/artcraft-logo.png` | ArtCraft Team | Original work: first-party ArtCraft brand mark (ArtCraft wordmark (symbol + "ARTCRAFT"), dark ink for light backgrounds) | ArtCraft trademark, not open source; `docs/brand/LICENSE-brand.txt` (not MIT/Apache) |
-| `docs/brand/artcraft-logo.svg` | ArtCraft Team | Original work: first-party ArtCraft brand mark (ArtCraft wordmark (symbol + "ARTCRAFT"), dark ink for light backgrounds) | ArtCraft trademark, not open source; `docs/brand/LICENSE-brand.txt` (not MIT/Apache) |
-| `docs/brand/artcraft-mark-black.png` | ArtCraft Team | Original work: first-party ArtCraft brand mark (ArtCraft symbol ("A" mark), black) | ArtCraft trademark, not open source; `docs/brand/LICENSE-brand.txt` (not MIT/Apache) |
-| `docs/brand/artcraft-mark-black.svg` | ArtCraft Team | Original work: first-party ArtCraft brand mark (ArtCraft symbol ("A" mark), black) | ArtCraft trademark, not open source; `docs/brand/LICENSE-brand.txt` (not MIT/Apache) |
-| `docs/brand/artcraft-mark.png` | ArtCraft Team | Original work: first-party ArtCraft brand mark (ArtCraft symbol ("A" mark), blue) | ArtCraft trademark, not open source; `docs/brand/LICENSE-brand.txt` (not MIT/Apache) |
-| `docs/brand/artcraft-mark.svg` | ArtCraft Team | Original work: first-party ArtCraft brand mark (ArtCraft symbol ("A" mark), blue) | ArtCraft trademark, not open source; `docs/brand/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/jbd-logo.png` | Jabrod (Anshuman) | Original work: the JBD cube logo (466x512, transparent), from the first JBD app (src/assets/jbd-logo.png) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/jbd-icon-256.png` | Jabrod (Anshuman) | Original work: the JBD app icon, full-bleed 256 px tile, from the first JBD app (src-tauri/icons) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/jbd.ico` | Jabrod (Anshuman) | Original work: the JBD app icon as a Windows .ico (16-256 px, taskbar-tuned), from the first JBD app (src-tauri/icons/icon.ico) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
 
 ## Downloaded at runtime
 

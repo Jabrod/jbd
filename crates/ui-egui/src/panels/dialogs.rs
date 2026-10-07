@@ -29,7 +29,7 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
     let mut open = true;
     match d {
         Dialog::About => {
-            egui::Window::new("About FilmCraft")
+            egui::Window::new("About JBD")
                 .open(&mut open)
                 .collapsible(false)
                 .resizable(false)
@@ -226,23 +226,21 @@ fn delete_tracks(app: &mut FilmcraftApp, ctx: &egui::Context) -> bool {
     keep
 }
 
-/// Help ▸ About FilmCraft: version, credits and the ArtCraft community links. Joining the Discord
-/// is the first, accented button.
+/// Help ▸ About JBD: version, the jabrod.com links (JBD's page is the first, accented button),
+/// support, and the credit to FilmCraft, the open-source editor JBD is built on.
 ///
-/// Automation ids: `about.discord`, `about.website`, `about.appPage`, `about.github`,
-/// `about.reportIssue`.
+/// Automation ids: `about.appPage`, `about.support`, `about.website`, `about.filmcraft`.
 fn about(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
     use crate::icons::{self, Icon};
     use crate::links;
     let t = app.tokens;
     ui.set_width(380.0);
-    // ArtCraft wordmark (first-party trademark, docs/brand/).
+    // The JBD cube and name (Jabrod trademark, assets/jbd/).
     let (r, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 30.0), egui::Sense::hover());
     crate::brand::paint_wordmark(ui, egui::pos2(r.min.x, r.center().y), 20.0, app.ui.dark);
     ui.add_space(6.0);
-    ui.heading("FilmCraft");
     ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
-    ui.label("A clean-room, pure-Rust non-linear video editor. Part of the ArtCraft family.");
+    ui.label("AI video editor by Jabrod.");
     ui.add_space(10.0);
     let mut link = |ui: &mut egui::Ui, id: &str, icon: Icon, label: &str, url: &str, primary: bool| {
         let size = egui::vec2(ui.available_width(), if primary { 36.0 } else { 28.0 });
@@ -271,12 +269,17 @@ fn about(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
             links::open(ui.ctx(), url);
         }
     };
-    link(ui, "discord", Icon::Chat, "Join the ArtCraft Discord", links::DISCORD, true);
+    link(ui, "appPage", Icon::Globe, "JBD on jabrod.com", links::APP_PAGE, true);
     ui.add_space(6.0);
-    link(ui, "website", Icon::Globe, "getartcraft.com", links::WEBSITE, false);
-    link(ui, "appPage", Icon::Globe, "FilmCraft on getartcraft.com", links::APP_PAGE, false);
-    link(ui, "github", Icon::Code, "Source code on GitHub", links::GITHUB, false);
-    link(ui, "reportIssue", Icon::Code, "Report an issue", links::ISSUES, false);
+    link(ui, "support", Icon::Chat, "Contact support", links::SUPPORT, false);
+    link(ui, "website", Icon::Globe, "jabrod.com", links::WEBSITE, false);
+    link(ui, "filmcraft", Icon::Code, "Built on FilmCraft (open source)", links::FILMCRAFT, false);
     ui.add_space(10.0);
-    ui.label(egui::RichText::new("MIT OR Apache-2.0. Fonts: Inter, Noto Serif and JetBrains Mono (SIL OFL 1.1).").small().color(t.text_dim));
+    ui.label(
+        egui::RichText::new(
+            "© Jabrod. Built on FilmCraft, © the FilmCraft contributors (MIT OR Apache-2.0). Fonts: Inter, Noto Serif and JetBrains Mono (SIL OFL 1.1).",
+        )
+        .small()
+        .color(t.text_dim),
+    );
 }
