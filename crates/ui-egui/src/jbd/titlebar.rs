@@ -45,9 +45,8 @@ const MENUS: [(&str, &[Entry]); 6] = [
     (
         "File",
         &[
-            As("file.newProject", "New Project…"),
+            Jbd("jbd.home", "New Project…", Some("Ctrl+N")),
             As("file.open", "Open Project…"),
-            Jbd("jbd.home", "Start Screen", None),
             Sep,
             Cmd("file.save"),
             Cmd("file.saveAs"),
@@ -106,17 +105,7 @@ const MENUS: [(&str, &[Entry]); 6] = [
         ],
     ),
     ("Settings", &[Jbd("jbd.settings", "Settings…", Some("Ctrl+,")), Cmd("app.keyboardShortcuts"), Sep, Sub("Preferences", &["Edit", "Preferences"])]),
-    (
-        "Help",
-        &[
-            Cmd("help.appPage"),
-            Cmd("help.support"),
-            Cmd("help.revealLogFiles"),
-            Sep,
-            Jbd("jbd.licenses", "Third-Party Licences", None),
-            As("app.about", "About JBD"),
-        ],
-    ),
+    ("Help", &[Cmd("help.appPage"), Cmd("help.support"), Cmd("help.revealLogFiles"), Sep, As("app.about", "About JBD")]),
 ];
 
 pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
@@ -291,7 +280,6 @@ pub fn run(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str) {
         "jbd.toggle.side" => super::toggle_area(app, "side"),
         "jbd.toggle.timeline" => super::toggle_area(app, "timeline"),
         "jbd.layout.reset" => super::reset_layout(app),
-        "jbd.licenses" => super::licences::open(app),
         "jbd.settings" => super::settings::open(app, "general"),
         _ => {
             if let Err(e) = menus::invoke(app, ctx, id, json!({})) {

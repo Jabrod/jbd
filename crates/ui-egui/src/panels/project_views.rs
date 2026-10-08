@@ -184,7 +184,14 @@ pub fn item_interactions(
         actions.push(("project.select".into(), json!({"items": sel.iter().map(|i| i.0).collect::<Vec<_>>()})));
     }
     if resp.double_clicked() {
-        let cmd = if matches!(kind, ItemKind::Sequence(_)) { "sequence.open" } else { "source.open" };
+        // JBD: double-clicking media adds it to the timeline (there is no Source monitor in its layout)
+        let cmd = if matches!(kind, ItemKind::Sequence(_)) {
+            "sequence.open"
+        } else if app.jbd.enabled() {
+            "jbd.addToTimeline"
+        } else {
+            "source.open"
+        };
         actions.push((cmd.into(), json!({"item": id.0})));
     }
     if drag && resp.drag_started() {
@@ -199,6 +206,10 @@ fn item_menu(app: &mut FilmcraftApp, ui: &mut egui::Ui, id: ItemId, kind: &ItemK
     let sel = || json!({"items": [id.0]});
     if ui.button("Rename").clicked() {
         actions.push(("projectPanel.rename".into(), json!({"item": id.0})));
+        ui.close();
+    }
+    if app.jbd.enabled() && !matches!(kind, ItemKind::Sequence(_)) && ui.button("Add to Timeline").clicked() {
+        actions.push(("jbd.addToTimeline".into(), json!({"item": id.0})));
         ui.close();
     }
     if ui.button("Open in Source Monitor").clicked() {

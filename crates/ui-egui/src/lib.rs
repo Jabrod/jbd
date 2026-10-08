@@ -887,6 +887,9 @@ impl FilmcraftApp {
         if ctx.egui_wants_keyboard_input() || self.dialog == Some(Dialog::Shortcuts) {
             return;
         }
+        if self.jbd.enabled() {
+            jbd::shortcuts(self, ctx);
+        }
         // Esc cancels a dynamic trim in progress
         if self.session.trim_play.dynamic.is_some() && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
             let _ = self.session.execute("trim.cancelDynamic", json!({}));
@@ -897,7 +900,24 @@ impl FilmcraftApp {
         ctx.input_mut(|i| {
             let panel = self.bindings.iter().filter(|b| b.3.as_deref() == Some(focused));
             let app_wide = self.bindings.iter().filter(|b| b.3.is_none());
-            for (m, k, id, _) in panel.chain(app_wide) {
+            let ordered: Vec<_> = panel.chain(app_wide).collect();
+            // First the bindings whose modifiers match exactly, so an app-wide Ctrl+Shift+W
+            // (Close Project) beats the Timeline's Ctrl+W; then egui's logical match, which
+            // ignores extra Shift/Alt (keys like `+` that need Shift on some layouts).
+            for (m, k, id, _) in &ordered {
+                let mut hit = false;
+                i.events.retain(|e| match e {
+                    egui::Event::Key { key, pressed: true, modifiers, .. } if key == k && modifiers.matches_exact(*m) => {
+                        hit = true;
+                        false
+                    }
+                    _ => true,
+                });
+                if hit {
+                    fire.push(id.clone());
+                }
+            }
+            for (m, k, id, _) in &ordered {
                 if i.consume_key(*m, *k) {
                     fire.push(id.clone());
                 }
@@ -1149,6 +1169,11 @@ impl FilmcraftApp {
         p.rect_filled(bar, 3.0, t.separator);
         p.rect_filled(egui::Rect::from_min_size(bar.min, egui::vec2(bar.width() * f, bar.height())), 3.0, t.accent);
         let verb = if job.label.starts_with("Rendering") { job.label.clone() } else { "Exporting".to_string() };
+        if self.jbd.enabled() {
+            // JBD's loader beside the job's progress
+            let lx = bar.min.x - 8.0 - p.layout_no_wrap(format!("{verb}… {:.0}%", f * 100.0), Tokens::ui(11.0), t.text_dim).size().x - 14.0;
+            jbd::cube::paint_loader(p, egui::pos2(lx, sb.center().y), 14.0, ui.input(|i| i.time));
+        }
         p.text(egui::pos2(bar.min.x - 8.0, sb.center().y), egui::Align2::RIGHT_CENTER, format!("{verb}… {:.0}%", f * 100.0), Tokens::ui(11.0), t.text_dim);
         let resp = ui.interact(cancel, egui::Id::new(("job-cancel", job.id)), egui::Sense::click());
         let c = if resp.hovered() { t.hot_text } else { t.text_dim };

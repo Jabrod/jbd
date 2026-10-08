@@ -30,7 +30,8 @@ filmcraft-engine = { workspace = true }
 filmcraft-ui-egui = { workspace = true }
 filmcraft-platform = { workspace = true }
 egui = { workspace = true }
-eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit", "wayland", "x11"] }
+# "links": open URLs in the browser (sign-in, Upgrade, help); off by default with default-features = false
+eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit", "wayland", "x11", "links"] }
 serde_json = { workspace = true }
 log = { workspace = true }
 rfd = { workspace = true }

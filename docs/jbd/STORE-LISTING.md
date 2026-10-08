@@ -49,7 +49,7 @@ Hinglish captions") and it edits your timeline one undoable step at a time.
 - Free with a Jabrod account; JBD Pro for 4K exports without the mark
 
 ## Search terms (up to 7)
-video editor, reels editor, youtube editor, shorts editor, 4k video editor, capcut alternative, jabrod
+video editor, reels editor, youtube editor, shorts editor, 4k video editor, video maker, jabrod
 
 ## What's new in this version
 JBD 1.0: a new, faster editor. A rebuilt timeline and preview, colour, audio mixing, titles and

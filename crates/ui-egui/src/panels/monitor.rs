@@ -200,6 +200,16 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect, which: Which)
         if let Some(tex) = shown {
             ui.painter().image(tex, pic, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
         }
+        // JBD's loader: the turning cube while the picture is on its way
+        if app.jbd.enabled() && !exact {
+            let t_now = ctx.input(|i| i.time);
+            if shown.is_none() {
+                crate::jbd::cube::paint_loader(ui.painter(), pic.center(), 34.0, t_now);
+            } else if !playing {
+                crate::jbd::cube::paint_loader(ui.painter(), pic.right_bottom() - egui::vec2(18.0, 18.0), 16.0, t_now);
+            }
+            ctx.request_repaint();
+        }
         if let Some(ra) = ref_area {
             // the reference frame (CPU path)
             let rf = rate.frame_at(Tick(mv.compare_ref.unwrap_or(time.0)));

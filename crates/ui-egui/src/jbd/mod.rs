@@ -14,12 +14,11 @@
 //! Files: [`cube`] (the 3D logo and JBD's one loader), [`splash`], [`sign_in`], [`account`] (the
 //! account chip and its menu), [`titlebar`] (JBD's title bar and menus), [`welcome`] (the start
 //! screen), [`director`] (the Director tab), [`window`] (resizing the frameless window),
-//! [`licences`] (third-party notices), [`style`] (drawing helpers shared by these screens).
+//! [`style`] (drawing helpers shared by these screens).
 
 pub mod account;
 pub mod cube;
 pub mod director;
-pub mod licences;
 pub mod settings;
 pub mod sign_in;
 pub mod splash;
@@ -62,8 +61,6 @@ pub struct JbdState {
     /// The meters' last reading and when it was taken (UI time, s).
     pub usage: SystemUsage,
     usage_at: f64,
-    /// The third-party licences window is open.
-    pub licences_open: bool,
     /// JBD Settings is open, at this section, with this preferences schema (re-read after changes).
     pub settings_open: bool,
     pub settings_section: String,
@@ -129,8 +126,8 @@ pub fn after_frame(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
     if !app.jbd.enabled() {
         return;
     }
-    licences::show(app, ui.ctx());
     settings::show(app, ui.ctx());
+    welcome::confirm_window(app, ui.ctx());
     window::resize_edges(ui);
 }
 
@@ -199,12 +196,19 @@ pub fn media_toolbar(app: &mut FilmcraftApp, ui: &mut egui::Ui, strip: egui::Rec
         ui.painter().galley(pos2(r.min.x + 24.0, cy - g.size().y / 2.0), g, if hot || boxed { t.text } else { t.text_dim });
         let _ = Align2::LEFT_CENTER;
         if resp.clicked() {
+            ensure_timeline(app);
             let r = match id {
                 "import" => crate::menus::invoke(app, &ctx, "file.import", serde_json::json!({})),
                 "text" => crate::menus::invoke(app, &ctx, "graphics.newText", serde_json::json!({"text": "Your text", "newClip": true})),
                 "shape" => crate::menus::invoke(app, &ctx, "graphics.newRectangle", serde_json::json!({})),
                 _ => {
-                    app.show_panel(crate::dock::PanelKind::EssentialGraphics);
+                    // beside the Inspector, never on top of the Preview
+                    use crate::dock::PanelKind;
+                    if !app.jbd.areas.side {
+                        toggle_area(app, "side");
+                    }
+                    app.ui.dock.open_near(PanelKind::EssentialGraphics, PanelKind::Properties);
+                    app.ui.dock.activate(PanelKind::EssentialGraphics);
                     Ok(serde_json::Value::Null)
                 }
             };
@@ -278,7 +282,85 @@ pub fn gate(app: &mut FilmcraftApp, ui: &mut egui::Ui) -> bool {
         sign_in::show(app, ui, &backend, &status);
         return true;
     }
+    if app.ui.mode == crate::state::Mode::Edit {
+        ensure_timeline(app);
+    }
     false
+}
+
+/// JBD's own meaning of some editor commands, for the menus, the shortcuts and the Media panel
+/// (calls with parameters, from agents and the control channel, keep the engine's meaning):
+/// - File ▸ Close Project asks about unsaved changes, closes and shows the start screen;
+/// - File ▸ New Project (Ctrl+Alt+N) shows the start screen's templates.
+///
+/// Returns true when JBD handled `id`.
+pub fn intercept(app: &mut FilmcraftApp, id: &str) -> bool {
+    match id {
+        "file.closeProject" | "file.closeAllProjects" => welcome::request(app, welcome::Pending::Close),
+        "file.newProject" => app.ui.mode = crate::state::Mode::Import,
+        _ => return false,
+    }
+    true
+}
+
+/// The shortcuts JBD's menus show for its own items (the editor's bindings for these keys mean
+/// something else: Ctrl+N is New Timeline, Ctrl+, the full preferences). Runs before the
+/// editor's shortcuts; a key matches only with exactly these modifiers.
+pub fn shortcuts(app: &mut FilmcraftApp, ctx: &egui::Context) {
+    use egui::{Key, Modifiers};
+    const KEYS: [(Key, &str); 2] = [(Key::N, "jbd.home"), (Key::Comma, "jbd.settings")];
+    let mut fire = Vec::new();
+    ctx.input_mut(|i| {
+        i.events.retain(|e| match e {
+            egui::Event::Key { key, pressed, modifiers, .. } if modifiers.matches_exact(Modifiers::COMMAND) => match KEYS.iter().find(|(k, _)| k == key) {
+                Some((_, id)) => {
+                    if *pressed {
+                        fire.push(*id);
+                    }
+                    false
+                }
+                None => true,
+            },
+            _ => true,
+        });
+    });
+    for id in fire {
+        titlebar::run(app, ctx, id);
+    }
+}
+
+/// JBD always has a timeline open, as the first JBD did: Text, Shape, Motion, import and the
+/// preview all work on it. When the project has none open (File ▸ New Project, closing the last
+/// one, a project saved without one), open its first timeline, or make "Main" (1920×1080, 30 fps).
+pub fn ensure_timeline(app: &mut FilmcraftApp) {
+    if app.session.state.active_sequence.is_some() {
+        return;
+    }
+    let first = app.session.project.items.iter().find(|(_, it)| matches!(it.kind, filmcraft_engine::project::ItemKind::Sequence(_))).map(|(id, _)| *id);
+    let r = match first {
+        Some(id) => app.session.execute("sequence.open", serde_json::json!({"item": id.0})),
+        None => app.session.execute("file.newSequence", serde_json::json!({"name": "Main", "width": 1920, "height": 1080, "fps": 30.0})),
+    };
+    if let Err(e) = r {
+        app.ui.status = e.to_string();
+    }
+}
+
+/// Media ▸ double-click (the first JBD's behaviour): put the clip at the end of the timeline and
+/// show it in the preview, instead of opening a Source monitor JBD's layout doesn't have.
+pub fn add_to_timeline(app: &mut FilmcraftApp, item: u64) -> Result<(), String> {
+    ensure_timeline(app);
+    let end = app.session.active_sequence().map(|q| q.duration()).unwrap_or_default();
+    app.session.set_playhead(end);
+    app.session
+        .execute(
+            "clip.automateToSequence",
+            serde_json::json!({"items": [item], "ordering": "selection", "placement": "sequentially", "method": "overwrite", "videoTransition": false, "audioTransition": false}),
+        )
+        .map_err(|e| e.to_string())?;
+    app.session.set_playhead(end);
+    app.ui.mode = crate::state::Mode::Edit;
+    Ok(())
 }
 
 /// On the Export screen and in Quick Export: what JBD Free does to exports, with an Upgrade button.

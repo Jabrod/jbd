@@ -60,21 +60,32 @@ fn account_backend(data_dir: Option<std::path::PathBuf>) -> std::sync::Arc<dyn j
 
 /// The title bar's CPU and GPU meters: whole-computer CPU load (sysinfo) and, on Windows, the
 /// GPU's 3D engine load from the same counters Task Manager uses (filmcraft_platform::win_gpu).
+///
+/// The readings are taken on a background thread once a second: Windows' GPU counters cover every
+/// engine of every process (hundreds of instances) and one sample can take a long time, which on
+/// the UI thread made the whole editor stutter once a second. The title bar only reads the latest.
 fn usage_meter() -> impl FnMut() -> filmcraft_ui_egui::jbd::SystemUsage + Send {
-    let mut sys = sysinfo::System::new();
-    // CPU load is measured between two readings: take the first one now
-    sys.refresh_cpu_usage();
-    #[cfg(windows)]
-    let mut gpu = filmcraft_platform::win_gpu::GpuCounters::open();
-    move || {
+    use std::sync::{Arc, Mutex, PoisonError};
+    let latest = Arc::new(Mutex::new(filmcraft_ui_egui::jbd::SystemUsage::default()));
+    let writer = latest.clone();
+    let _ = std::thread::Builder::new().name("jbd-usage".into()).spawn(move || {
+        let mut sys = sysinfo::System::new();
+        // CPU load is measured between two readings: take the first one now
         sys.refresh_cpu_usage();
-        let cpu = Some(sys.global_cpu_usage());
         #[cfg(windows)]
-        let gpu = gpu.as_mut().and_then(|g| g.sample().0).map(|v| v as f32);
-        #[cfg(not(windows))]
-        let gpu = None;
-        filmcraft_ui_egui::jbd::SystemUsage { cpu, gpu }
-    }
+        let mut gpu = filmcraft_platform::win_gpu::GpuCounters::open();
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+            sys.refresh_cpu_usage();
+            let cpu = Some(sys.global_cpu_usage());
+            #[cfg(windows)]
+            let gpu = gpu.as_mut().and_then(|g| g.sample().0).map(|v| v as f32);
+            #[cfg(not(windows))]
+            let gpu = None;
+            *writer.lock().unwrap_or_else(PoisonError::into_inner) = filmcraft_ui_egui::jbd::SystemUsage { cpu, gpu };
+        }
+    });
+    move || *latest.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Windows: the taskbar and Alt-Tab icon. eframe only sets the window's small icon, so without

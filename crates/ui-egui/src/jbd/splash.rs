@@ -34,11 +34,16 @@ pub const STEPS: [(&str, f64); 6] = [
     ("Opening JBD", 1.95),
 ];
 
-/// The splash's clock.
+/// The splash's clock: animation time, advanced each drawn frame by the real time since the
+/// previous one but never more than [`MAX_STEP`], so slow first frames can't skip the animation.
 #[derive(Default)]
 pub struct Splash {
-    start: Option<f64>,
+    t: f64,
+    last: Option<f64>,
 }
+
+/// The most animation time one frame may advance (s).
+const MAX_STEP: f64 = 1.0 / 30.0;
 
 /// The cube's pose at `t` seconds: starts smaller, turned 270° back and tilted further, and
 /// eases into the logo pose (the first JBD's landing).
@@ -58,8 +63,11 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, status: &AccountStatus) -
     let ctx = ui.ctx().clone();
     let now = ctx.input(|i| i.time);
     let Some(splash) = app.jbd.splash.as_mut() else { return true };
-    let start = *splash.start.get_or_insert(now);
-    let t = now - start;
+    if let Some(last) = splash.last {
+        splash.t += (now - last).clamp(0.0, MAX_STEP);
+    }
+    splash.last = Some(now);
+    let t = splash.t;
     let t_tokens = app.tokens;
     let rect = ui.max_rect();
     let resp = ui.interact(rect, egui::Id::new("jbd-splash"), Sense::click_and_drag());

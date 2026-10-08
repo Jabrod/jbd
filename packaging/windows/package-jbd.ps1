@@ -116,6 +116,13 @@ $kits = "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
 $MakeAppx = Get-ChildItem $kits -Directory | Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } | Sort-Object { [version]$_.Name } -Descending |
   ForEach-Object { Join-Path $_.FullName 'x64\makeappx.exe' } | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $MakeAppx) { throw 'makeappx.exe not found: install the Windows 10/11 SDK' }
+# resources.pri indexes the Assets' size variants (Square44x44Logo.targetsize-N_altform-unplated),
+# so the taskbar and Start show the full-size icon instead of the small plated 44 px one
+$MakePri = Join-Path (Split-Path $MakeAppx) 'makepri.exe'
+if (-not (Test-Path $MakePri)) { throw 'makepri.exe not found: install the Windows 10/11 SDK' }
+$PriConfig = Join-Path $Root 'target\jbd-package\priconfig.xml'
+Invoke-Native 'makepri createconfig' { & $MakePri createconfig /cf $PriConfig /dq en-US /pv 10.0.0 /o }
+Invoke-Native 'makepri new' { & $MakePri new /pr $MsixStage /cf $PriConfig /mn (Join-Path $MsixStage 'AppxManifest.xml') /of (Join-Path $MsixStage 'resources.pri') /o }
 Invoke-Native 'makeappx pack' { & $MakeAppx pack /d $MsixStage /p $Msix /o }
 # read it back and check the identity Partner Center expects
 $Verify = Join-Path $Root 'target\jbd-package\msix-verify'

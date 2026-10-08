@@ -1,7 +1,7 @@
 //! Product and support links (Help menu, About dialog, Home screen).
 //!
 //! JBD is made by Jabrod: its page, downloads, Pro and support live on jabrod.com. The open-source
-//! software JBD includes is credited in Help ▸ Third-Party Licences (jbd/licences.rs).
+//! software JBD includes is credited in THIRD-PARTY-NOTICES.txt, shipped next to jbd.exe.
 
 /// JBD's page on jabrod.com.
 pub const APP_PAGE: &str = "https://jabrod.com/jbd";
@@ -46,7 +46,7 @@ mod tests {
     #[test]
     fn no_artcraft_links() {
         assert!(ALL.iter().all(|(_, label, u)| !label.contains("ArtCraft") && !u.contains("artcraft")));
-        // and none of them name FilmCraft (it is credited in the third-party licences)
+        // and none of them name FilmCraft (it is credited in THIRD-PARTY-NOTICES.txt)
         assert!(ALL.iter().all(|(_, label, u)| !label.contains("FilmCraft") && !u.contains("filmcraft")));
     }
 }

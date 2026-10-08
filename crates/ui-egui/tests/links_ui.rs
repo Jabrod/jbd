@@ -93,11 +93,11 @@ fn jbd_links_everywhere() {
     // Header: FilmCraft's Discord button is gone (ArtCraft marks are not licensed to forks).
     assert!(d.ids("header.discord").is_empty());
     d.snapshot("header");
-    // About dialog: JBD's page first, then support, jabrod.com, the terms and the licences.
+    // About dialog: JBD's page first, then support, jabrod.com and the terms.
     d.ok("engine.execute", json!({"command": "app.about", "params": {}}));
     d.frames(3);
     let about = d.ids("about.");
-    for id in ["about.appPage", "about.support", "about.website", "about.terms", "about.licences"] {
+    for id in ["about.appPage", "about.support", "about.website", "about.terms"] {
         assert!(about.iter().any(|a| a == id), "{id} in {about:?}");
     }
     d.snapshot("about");

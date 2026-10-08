@@ -145,6 +145,9 @@ pub fn panel_command_id(p: PanelKind) -> String {
 
 /// Execute a UI or engine command by id.
 pub fn invoke(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+    if app.jbd.enabled() && params.as_object().is_none_or(|m| m.is_empty()) && crate::jbd::intercept(app, id) {
+        return Ok(Value::Null);
+    }
     if matches!(id, "app.language.english" | "app.language.japanese") {
         // Japanese needs the craft-fonts (built with CRAFT_FONTS_DIR) or a font installed on the system
         if id == "app.language.japanese" && !crate::i18n::install_japanese_font(ctx) {

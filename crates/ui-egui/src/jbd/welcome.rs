@@ -37,6 +37,8 @@ pub const TEMPLATES: [(&str, &str, &str, u32, u32); 4] = [
 pub enum Pending {
     Template(u32, u32),
     Open(String),
+    /// File ▸ Close Project: close, then show this screen.
+    Close,
 }
 
 pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
@@ -163,8 +165,6 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         }
         ry += 70.0;
     }
-
-    confirm_window(app, &ctx);
 }
 
 /// "C:\Users\…\Untitled 12" when longer than `max` characters.
@@ -179,7 +179,7 @@ fn elide(s: &str, max: usize) -> String {
 }
 
 /// Do it now, or ask about unsaved changes first.
-fn request(app: &mut FilmcraftApp, what: Pending) {
+pub(crate) fn request(app: &mut FilmcraftApp, what: Pending) {
     if app.session.is_dirty() {
         app.jbd.welcome_pending = Some(what);
     } else {
@@ -196,6 +196,13 @@ fn go(app: &mut FilmcraftApp, what: Pending) {
             .and_then(|_| app.session.execute("file.newSequence", json!({"name": "Main", "width": w, "height": h, "fps": 30.0}))),
         Pending::Open(path) if path.is_empty() => app.session.execute("file.openDemoProject", json!({})),
         Pending::Open(path) => app.session.execute("file.open", json!({"path": path})),
+        Pending::Close => {
+            if let Err(e) = app.session.execute("file.closeProject", json!({"force": true})) {
+                app.ui.status = e.to_string();
+            }
+            app.ui.mode = Mode::Import;
+            return;
+        }
     };
     match result {
         Ok(_) => app.ui.mode = Mode::Edit,
@@ -203,8 +210,9 @@ fn go(app: &mut FilmcraftApp, what: Pending) {
     }
 }
 
-/// "Save changes to <project>?" before replacing it.
-fn confirm_window(app: &mut FilmcraftApp, ctx: &egui::Context) {
+/// "Save changes to <project>?" before replacing or closing it (drawn after every frame, so it
+/// also shows over the editor for File ▸ Close Project).
+pub(crate) fn confirm_window(app: &mut FilmcraftApp, ctx: &egui::Context) {
     let Some(what) = app.jbd.welcome_pending.clone() else { return };
     let t = app.tokens;
     let name = app.session.project.name.clone();

@@ -362,6 +362,14 @@ pub fn floating(app: &mut FilmcraftApp, ctx: &egui::Context) {
 
 fn run(app: &mut FilmcraftApp, ctx: &egui::Context, actions: Actions) {
     for (cmd, p) in actions {
+        if cmd == "jbd.addToTimeline" {
+            if let Some(item) = p["item"].as_u64()
+                && let Err(e) = crate::jbd::add_to_timeline(app, item)
+            {
+                app.ui.status = e;
+            }
+            continue;
+        }
         if let Err(e) = crate::menus::invoke(app, ctx, &cmd, p) {
             app.ui.status = e;
         }

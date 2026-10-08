@@ -1,0 +1,8 @@
+asset:        Square44x44Logo.targetsize-48_altform-lightunplated.png
+title:        JBD taskbar / Start icon, 48 px, no backing plate (light taskbar)
+author:       Jabrod (Anshuman), for JBD
+source:       Original work: the jbd.ico frame of this size (assets/jbd/jbd.ico)
+license:      LicenseRef-Jabrod-Trademark; JBD name and logo are trademarks of Jabrod, not open source, not covered by MIT OR Apache-2.0
+license-file: assets/jbd/LICENSE-brand.txt
+added:        2026-10-08
+notes:        MSIX visual element: Windows shows it full size in the taskbar instead of the plated 44 px logo.

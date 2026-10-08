@@ -39,7 +39,7 @@ use crate::{Account, AccountBackend, AccountStatus, CLIENT_ID, Phase, Tier, Usag
 /// How long JBD keeps working without reaching jabrod.com.
 pub const OFFLINE_GRACE_DAYS: u64 = 14;
 /// How long to wait for you to finish signing in in the browser.
-const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(5 * 60);
+const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 const HTTP_TIMEOUT: Duration = Duration::from_secs(20);
 /// Focus changes call `check` often; ask jabrod.com at most this often.
 const CHECK_INTERVAL: Duration = Duration::from_secs(30);

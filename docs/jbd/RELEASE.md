@@ -53,6 +53,8 @@ It writes `JBD-<version>-setup.exe.sig` next to the installer.
 
 ## 5. Microsoft Store
 
+Every Partner Center screen, with what to choose in each field: [STORE-SUBMISSION.md](STORE-SUBMISSION.md).
+
 Upload the MSIX to the **JBD** product in Partner Center (Store ID `9P0KS6185QSX`), with the
 listing in [STORE-LISTING.md](STORE-LISTING.md) and the art from `jbd-media/out/store/`. Keep the
 fourth version field 0 and raise an earlier field for every update.
