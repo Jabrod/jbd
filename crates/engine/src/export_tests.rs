@@ -445,3 +445,49 @@ fn default_export_dir_never_needs_a_real_filesystem() {
     let s = Session { path: Some("/projects/show/edit.fcproj".into()), ..Default::default() };
     assert_eq!(crate::export_tools::default_export_dir(&s), std::path::PathBuf::from("/projects/show"));
 }
+
+/// JBD Free: every export a person starts is capped at 720p and carries the "Made with JBD" mark
+/// in the bottom-right corner, whatever size was asked for; Pro (Unrestricted) is untouched. The
+/// same frame is exported three ways and compared pixel by pixel.
+#[test]
+fn jbd_free_plan_caps_exports_at_720p_with_the_mark() {
+    let dir = Scratch::new("jbd-free");
+    let export = |s: &mut Session, name: &str, w: u32, h: u32| -> image::RgbaImage {
+        let sub = dir.0.join(name);
+        std::fs::create_dir_all(&sub).unwrap();
+        let path = sub.join("frame.png").to_string_lossy().to_string();
+        s.execute(
+            "file.exportMedia",
+            json!({"format": "png", "path": path, "width": w, "height": h, "range": "custom", "startSeconds": 1.0, "endSeconds": 1.04, "audio": false, "wait": true}),
+        )
+        .unwrap();
+        let file = files_in(&sub).into_iter().find(|f| f.ends_with(".png")).expect("a png was written");
+        image::open(sub.join(file)).unwrap().to_rgba8()
+    };
+    let mut s = demo();
+    s.plan = crate::Plan::Free;
+    // asked for 4K: Free gets 1280×720
+    let free = export(&mut s, "free", 3840, 2160);
+    assert_eq!(free.dimensions(), (1280, 720));
+    // the same frame from Pro at 1280×720 has no mark
+    s.plan = crate::Plan::Unrestricted;
+    let pro = export(&mut s, "pro", 1280, 720);
+    assert_eq!(pro.dimensions(), (1280, 720));
+    // Pro keeps the size it was asked for
+    assert_eq!(export(&mut s, "pro4k", 3840, 2160).dimensions(), (3840, 2160));
+    // compare: the mark is in the bottom-right box (10 % of the short side tall, 3.5 % inset),
+    // and nowhere else
+    let differs = |x0: u32, y0: u32, x1: u32, y1: u32| {
+        (y0..y1)
+            .flat_map(|y| (x0..x1).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                let (a, b) = (free.get_pixel(x, y).0, pro.get_pixel(x, y).0);
+                (0..3).any(|c| a[c].abs_diff(b[c]) > 8)
+            })
+            .count()
+    };
+    let in_mark = differs(1280 - 200, 720 - 110, 1280, 720);
+    let elsewhere = differs(0, 0, 1280 - 220, 720 - 130);
+    assert!(in_mark > 500, "the mark changed only {in_mark} pixels in the corner");
+    assert_eq!(elsewhere, 0, "the Free export differs outside the mark");
+}

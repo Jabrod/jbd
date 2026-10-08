@@ -1,0 +1,8 @@
+asset:        cube-timeline.png
+title:        JBD cube face: timeline (512 px)
+author:       Jabrod (Anshuman), for JBD
+source:       Original work: the JBD logo artwork, rendered from the first JBD's SVG faces by jbd-media/tools/cube-faces.cjs
+license:      LicenseRef-Jabrod-Trademark; JBD name and logo are trademarks of Jabrod, not open source, not covered by MIT OR Apache-2.0
+license-file: assets/jbd/LICENSE-brand.txt
+added:        2026-10-07
+notes:        Splash, sign-in and loader cube (crates/ui-egui/src/jbd/cube.rs).

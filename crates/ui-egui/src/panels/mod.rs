@@ -78,6 +78,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, p: PanelKind, rect: Rect)
         PanelKind::LumetriScopes => scopes::show(app, ui, rect),
         PanelKind::Metadata => metadata::show(app, ui, rect),
         PanelKind::Timecode => timecode::show(app, ui, rect),
+        PanelKind::Director => crate::jbd::director::show(app, ui, rect),
         PanelKind::Events => events::events(app, ui, rect),
         PanelKind::Progress => events::progress(app, ui, rect),
         PanelKind::ReferenceMonitor => reference::show(app, ui, rect),

@@ -116,7 +116,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     uic!("help.appPage", "JBD on jabrod.com", ["Help"], None),
     uic!("help.support", "Contact Support…", ["Help"], None),
     uic!("help.website", "Jabrod Website", ["Help"], None),
-    uic!("help.filmcraft", "Built on FilmCraft (open source)", ["Help"], None),
+    uic!("help.terms", "Terms and Privacy", ["Help"], None),
     uic!("help.revealLogFiles", "Reveal Log Files…", ["Help"], None),
     uic!("help.systemCompatibilityReport", "System Compatibility Report…", ["Help"], None),
     uic!("app.about", "About JBD", ["Help"], None),
@@ -561,7 +561,7 @@ pub fn menu_bar(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
 
 /// One menu level: items whose path ends here, and a submenu (at its first item's position) for
 /// each deeper path segment, recursively (e.g. Clip ▸ Video Options ▸ Time Interpolation).
-fn menu_level(ui: &mut egui::Ui, items: &[&MenuItem], depth: usize, clicked: &mut Option<String>) {
+pub(crate) fn menu_level(ui: &mut egui::Ui, items: &[&MenuItem], depth: usize, clicked: &mut Option<String>) {
     let mut subs: Vec<&str> = Vec::new();
     for it in items {
         if let Some(sub) = it.path.get(depth).map(String::as_str) {
@@ -582,7 +582,7 @@ fn menu_level(ui: &mut egui::Ui, items: &[&MenuItem], depth: usize, clicked: &mu
     }
 }
 
-fn menu_entry(ui: &mut egui::Ui, it: &MenuItem) -> bool {
+pub(crate) fn menu_entry(ui: &mut egui::Ui, it: &MenuItem) -> bool {
     // checkable items leave room for a checkmark drawn at the left
     let label = if it.checked.is_some() { format!("      {}", it.label) } else { it.label.clone() };
     let mut b = egui::Button::new(label);

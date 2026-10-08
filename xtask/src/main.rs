@@ -74,6 +74,8 @@ const LAYERS: &[(&str, u8)] = &[
     ("filmcraft", 6),
     ("cli", 6),
     ("web", 6),
+    // JBD crates (Jabrod): account and plan (network, credential store; desktop only)
+    ("jbd-account", 5),
 ];
 
 /// L0 crates that are not codecs/containers (no `bitstream`-only restriction).

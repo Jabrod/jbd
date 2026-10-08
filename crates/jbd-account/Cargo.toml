@@ -1,0 +1,30 @@
+[package]
+name = "jbd-account"
+description = "JBD: signing in with a Jabrod account, the JBD plan (Free / Pro / trial) and AI credits"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# The network, the browser sign-in and the saved session exist only in the desktop app; the web
+# build compiles the types and the trait so ui-egui can still build for wasm.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = { version = "3", default-features = false, features = ["rustls", "platform-verifier"] }
+sha2 = "0.10"
+base64 = "0.22"
+getrandom = "0.3"
+
+# The refresh token lives in the operating system's credential store: Windows Credential
+# Manager, the macOS Keychain. (Elsewhere: a file in the user's data folder.)
+[target.'cfg(windows)'.dependencies]
+keyring = { version = "3", default-features = false, features = ["windows-native"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3", default-features = false, features = ["apple-native"] }

@@ -15,7 +15,8 @@ use crate::panels::project::{Actions, Hover, Inst, View, commit_rename, font, op
 use crate::theme::Tokens;
 
 const OFFLINE: Color32 = Color32::from_rgb(0xe8, 0x5c, 0x5c);
-const BIN_COLOR: Color32 = Color32::from_rgb(237, 150, 58);
+/// Bin (folder) icons: JBD grey-blue, quieter than the clips (Premiere uses orange).
+const BIN_COLOR: Color32 = Color32::from_rgb(0x8a, 0x93, 0xb8);
 /// Width of the label chip lead-in before the Name column.
 const LEAD: f32 = 26.0;
 

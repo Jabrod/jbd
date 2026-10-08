@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Microsoft Store manifest for JBD (packaging/windows/package-jbd.ps1 fills __PACKAGE_VERSION__).
+
+  The identity is the one the first JBD reserved in Partner Center (case-sensitive), so this is an
+  update of the same Store product, not a new app. Store ID: 9P0KS6185QSX.
+  JBD runs as a full-trust desktop app; the Store signs the package after certification.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap mp">
+  <Identity
+    Name="Jabrod.JBD"
+    Publisher="CN=B31502B4-249B-4B91-8E2D-5E7989531A54"
+    Version="__PACKAGE_VERSION__"
+    ProcessorArchitecture="x64" />
+
+  <mp:PhoneIdentity PhoneProductId="5a0cc903-b907-47c3-b19e-e7f8d524e675" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
+
+  <Properties>
+    <DisplayName>JBD</DisplayName>
+    <PublisherDisplayName>Jabrod</PublisherDisplayName>
+    <Description>JBD, AI video editor by Jabrod: a multi-track timeline, colour, audio, titles and 4K export.</Description>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Applications>
+    <Application Id="JBD" Executable="jbd.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="JBD"
+        Description="AI video editor by Jabrod"
+        BackgroundColor="transparent"
+        Square44x44Logo="Assets\Square44x44Logo.png"
+        Square150x150Logo="Assets\Square150x150Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square310x310Logo="Assets\Square310x310Logo.png" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

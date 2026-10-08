@@ -922,6 +922,11 @@ fn preview_column(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect, seq_id:
     child.add_space(4.0);
     let est = child.label(egui::RichText::new(format!("Estimated file size: {}", format_bytes(sum.estimated_bytes))).color(t.text_dim));
     reg.add("export.estimate", est.rect, sum.estimated_size.clone());
+    // JBD Free: what the plan does to this export, with Upgrade
+    child.add_space(6.0);
+    if let Some(r) = crate::jbd::free_export_notice(&mut child, app.jbd.free_limits(), &t) {
+        reg.add("export.upgrade", r.rect, "Upgrade to Pro");
+    }
     // buttons
     let go = Rect::from_min_size(pos2(rect.max.x - 120.0, rect.max.y - 44.0), vec2(104.0, 30.0));
     let queue = Rect::from_min_size(pos2(go.min.x - 132.0, go.min.y), vec2(122.0, 30.0));
@@ -1159,6 +1164,7 @@ pub fn quick_export(app: &mut FilmcraftApp, ctx: &egui::Context, anchor: egui::P
         return;
     }
     let t = app.tokens;
+    let jbd_free = app.jbd.free_limits();
     let Some(seq) = app.session.state.active_sequence else {
         app.ui.export.quick_open = false;
         app.ui.status = "Quick Export: open a sequence first".into();
@@ -1214,6 +1220,9 @@ pub fn quick_export(app: &mut FilmcraftApp, ctx: &egui::Context, anchor: egui::P
             });
             ui.add_space(4.0);
             ui.label(egui::RichText::new(format!("Estimated file size: {}", est.as_deref().unwrap_or("–"))).color(t.text_dim).size(11.5));
+            if let Some(r) = crate::jbd::free_export_notice(ui, jbd_free, &t) {
+                reg.add("quickExport.upgrade", r.rect, "Upgrade to Pro");
+            }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let r = ui
                     .add(egui::Button::new(egui::RichText::new("Export").color(Color32::WHITE)).fill(t.accent).corner_radius(12.0).min_size(vec2(90.0, 26.0)));

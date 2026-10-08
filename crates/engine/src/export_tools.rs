@@ -354,6 +354,9 @@ fn write_sidecar(s: &Session, project: &Project, seq: ItemId, settings: &ExportS
 
 /// Run an export of `seq` in `project` as a background job (or now, with `wait`); returns the job id.
 pub fn spawn_export(s: &mut Session, project: Arc<Project>, seq: ItemId, mut settings: ExportSettings, label: String, wait: bool) -> Result<u64> {
+    // Every export a person starts (Export, Quick Export, the queue; from the UI, the control
+    // channel or MCP) comes through here, so the JBD Free limits can't be skipped by another route.
+    settings.jbd_free = s.plan == crate::Plan::Free;
     let format = settings.format;
     if !filmcraft_export::available(format) {
         return Err(EngineError::Other(format!("{} export is not available (no encoder registered)", format.label())));

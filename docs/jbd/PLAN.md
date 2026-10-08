@@ -49,40 +49,44 @@ Each one ends with something you can run and show.
 - Decide (owner): the licence of Jabrod's own code. The workspace `Cargo.toml` still says
   `MIT OR Apache-2.0` for every crate; the README says Jabrod's additions are all rights reserved.
 
-### J1 — Windows first
-- Windows CI that runs the tests and a headless import → edit → export smoke test.
-- Hardware decode with Media Foundation / D3D11 in `crates/platform` (FilmCraft only has macOS
-  VideoToolbox). Phone footage (H.264/HEVC, variable frame rate) must play smoothly on a normal
-  Windows laptop. This is the biggest technical risk; upstream wants it too (their #30), so
-  build it in a way we could offer back.
-- A corpus of real Android/iPhone/screen-recording files with round-trip tests.
-- Windows bugs found so far: `crates/ui-egui/tests/media_ui.rs` fails on Windows (2 tests,
-  "Access is denied" at line 93): it renames a media folder while the editor still holds files in
-  it open. macOS allows that; Windows does not. Close the handles (or change the test) and check
-  what users see when they move media while JBD is open.
-- Direct download: the existing WiX MSI (`packaging/windows/`) renamed for JBD with a new
-  UpgradeCode, signed, with an update check against jabrod.com.
+### J1 — Ready to sell: JBD 1.0.0 (done 2026-10-07)
+The owner moved the account/Pro work into J1 and the AI work into J2 (2026-10-07).
 
-#### Microsoft Store
-JBD ships to the Store as an MSIX under the identity the first JBD already reserved in Partner
-Center, so it is the same Store listing, not a new app:
+- [x] JBD look and flow from the first JBD: launch animation (3D cube landing, faces wiping on),
+  sign-in screen, frameless window with JBD's title bar (menus, undo/redo, saved state, CPU/GPU
+  meters, layout buttons, white Export, account chip, window buttons), start screen (templates,
+  recent projects), the JBD layout (Media | Preview | Inspector / Transcript / Director over the
+  Timeline), Media toolbar, preview size badge, JBD Settings. Type: Geist, Geist Mono, Archivo
+  Black (as jabrod.com). One loader: the turning cube. (`crates/ui-egui/src/jbd/`)
+- [x] Jabrod account (`crates/jbd-account`): browser sign-in (PKCE, loopback), refresh token in
+  Windows Credential Manager (the first JBD's saved session carries over), 14-day offline grace,
+  plan and AI credits from jabrod.com, Upgrade / Refresh / Sign out.
+- [x] Plans enforced in the engine (`Session::plan`, `export_tools::spawn_export`): Free exports
+  are capped at 720p and carry the "Made with JBD" mark; Pro and the trial are unrestricted.
+  Test: `engine export_tests::jbd_free_plan_caps_exports_at_720p_with_the_mark`.
+- [x] Windows: taskbar icon (`platform::win_icon`), GPU meter (`platform::win_gpu`), static C
+  runtime (`.cargo/config.toml`), speech to text on by default (Whisper, pure Rust).
+- [x] Performance checked: software decode on the laptop runs 1080p H.264 at ~390 fps, vertical
+  HEVC at ~160 fps, 4K H.264 at ~100 fps, so hardware decoding is not needed for 1.0.
+- [x] Packages (`packaging/windows/package-jbd.ps1`, [RELEASE.md](RELEASE.md)): per-user NSIS
+  installer that upgrades the first JBD in place (and honours its updater's /P /R), and the Store
+  MSIX under the reserved identity `Jabrod.JBD`. EULA and full third-party notices included;
+  FilmCraft is credited only there (its MIT licence requires the notice).
+- [x] Store listing copy: [STORE-LISTING.md](STORE-LISTING.md).
+- Known gaps: `crates/ui-egui/tests/media_ui.rs` fails on Windows (renames a folder that holds
+  open files); projects from the first JBD (project.db folders) can't be opened yet; the setup exe
+  is not code-signed (SmartScreen warns); hardware decode (Media Foundation) after launch.
 
-- Package/Identity/Name `Jabrod.JBD`, Publisher `CN=B31502B4-249B-4B91-8E2D-5E7989531A54`,
-  PublisherDisplayName `Jabrod`, Store ID `9P0KS6185QSX` (case-sensitive; from the old repo's
-  `docs/release-windows.md` and `src-tauri/store/AppxManifest.template.xml`).
-- Port `scripts/build-store-msix.ps1` from the old repo into `packaging/windows/store/`: stage
-  the release `jbd.exe` (no FFmpeg sidecars any more), write the manifest (Windows.Desktop,
-  runFullTrust, internetClient, the `jbd` protocol for sign-in), make the Store logos from
-  `assets/jbd/`, and pack with MakeAppx. Upload it unsigned; Microsoft signs it.
-- Store builds leave updates to the Store (no in-app updater), keep the fourth version field at 0
-  (`1.0.0.0`), and must pass the Windows App Certification Kit on a clean Windows 10 and 11.
-- Listing: description, screenshots of the new UI, privacy and support URLs on jabrod.com.
+### J2 — The AI Director (next)
+The owner's priority after 1.0. The account, the AI credits and the jabrod.com AI gateway are ready.
 
-### J2 — Jabrod account and Pro
-- New crate `jbd-account`: port the old `src-tauri/src/auth.rs` (OAuth code + PKCE over a
-  loopback port to jabrod.com, refresh token in Windows Credential Manager, 14-day offline grace).
-- Pro entitlement check (one plan, ₹4,999/year, 7-day trial); Dodo Payments checkout opens in
-  the browser on jabrod.com. Free exports get the JBD watermark.
+- New crate `jbd-director`: the agent loop from the first JBD's `src/core/ai/agent.ts`, in Rust.
+  Its tools are engine commands (the same registry the MCP server exposes), so every AI edit is a
+  normal, undoable command. Model calls: jabrod.com `/api/ai/chat` with the account's access token
+  (`AccountBackend::access_token`).
+- The Director tab (`jbd/director.rs`) becomes real: prompt, plan, steps, undo.
+- Recipes: remove pauses, 9:16 reel, captions (Hinglish via transliteration), cut to the beat.
+- Import projects from the first JBD.
 
 ### J3 — Understanding the footage
 - Transcription on by default: FilmCraft's pure-Rust Whisper locally, plus cloud ASR through the
@@ -91,12 +95,7 @@ Center, so it is the same Store listing, not a new app:
 - Port pauses, shot changes, shot quality and music beats (old `analysis.rs`, `shots.rs`,
   `rhythm.rs`) into a `jbd-analysis` crate; searchable footage index.
 
-### J4 — The AI Director
-- New crate `jbd-director`: the agent loop from the old `src/core/ai/agent.ts`, in Rust. Its
-  tools are FilmCraft engine commands (the same registry the MCP server exposes), so every AI
-  edit is a normal, undoable command.
-- Model calls go to jabrod.com `/api/ai/chat` (OpenRouter, Vercel AI Gateway fallback).
-- Director panel in egui; recipes: remove pauses, make a 9:16 reel, captions, cut to the beat.
+### J4 — (moved into J2)
 
 ### J5 — Creator workspace
 - A simple default workspace for reel creators (Media, Preview, Director, Transcript, Timeline).

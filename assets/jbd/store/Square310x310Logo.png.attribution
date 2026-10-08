@@ -1,0 +1,8 @@
+asset:        Square310x310Logo.png
+title:        JBD large Start tile, 310 px
+author:       Jabrod (Anshuman), for JBD
+source:       Original work: from the first JBD (src-tauri/icons)
+license:      LicenseRef-Jabrod-Trademark; JBD name and logo are trademarks of Jabrod, not open source, not covered by MIT OR Apache-2.0
+license-file: assets/jbd/LICENSE-brand.txt
+added:        2026-10-07
+notes:        MSIX visual element.

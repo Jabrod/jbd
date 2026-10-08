@@ -358,8 +358,22 @@ pub struct Session {
     pub log: panels::EventLog,
     /// Media Browser navigation (directory, back / forward history, selected files).
     pub browser: media_browser::BrowserState,
+    /// Which JBD plan's export limits apply. The JBD app sets it from the signed-in Jabrod
+    /// account (Free until jabrod.com says Pro); tests, the CLI and tools leave it unrestricted.
+    pub plan: Plan,
     /// Nesting depth of [`Session::execute`] (commands that run other commands).
     exec_depth: u32,
+}
+
+/// The JBD plan whose limits apply to exports (see [`export_tools::spawn_export`]).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Plan {
+    /// No limits: JBD Pro (and the 7-day trial), and every non-JBD host.
+    #[default]
+    Unrestricted,
+    /// JBD Free: exports up to 720p with the "Made with JBD" mark.
+    Free,
 }
 
 /// An export advanced a batch at a time on the host's thread ([`Session::pump_jobs`]).
@@ -444,6 +458,7 @@ impl Session {
             transcriber: None,
             log: Default::default(),
             browser: Default::default(),
+            plan: Plan::default(),
             exec_depth: 0,
         }
     }

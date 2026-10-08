@@ -1,0 +1,8 @@
+asset:        jbd-icon-1024.png
+title:        JBD app icon, 1024 px full-bleed source
+author:       Jabrod (Anshuman), for JBD
+source:       Original work: from the first JBD (src-tauri/icons/source/jbd-icon-1024.png)
+license:      LicenseRef-Jabrod-Trademark; JBD name and logo are trademarks of Jabrod, not open source, not covered by MIT OR Apache-2.0
+license-file: assets/jbd/LICENSE-brand.txt
+added:        2026-10-07
+notes:        Source for store art and launch media.

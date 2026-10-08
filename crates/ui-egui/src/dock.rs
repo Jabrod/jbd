@@ -36,10 +36,12 @@ pub enum PanelKind {
     Progress,
     ReferenceMonitor,
     Timecode,
+    /// JBD: the AI Director (jbd/director.rs).
+    Director,
 }
 
 impl PanelKind {
-    pub const ALL: [PanelKind; 26] = [
+    pub const ALL: [PanelKind; 27] = [
         PanelKind::Project,
         PanelKind::MediaBrowser,
         PanelKind::Libraries,
@@ -66,6 +68,7 @@ impl PanelKind {
         PanelKind::Progress,
         PanelKind::ReferenceMonitor,
         PanelKind::Timecode,
+        PanelKind::Director,
     ];
     pub fn title(self) -> &'static str {
         match self {
@@ -95,6 +98,18 @@ impl PanelKind {
             PanelKind::Progress => "Progress",
             PanelKind::ReferenceMonitor => "Reference Monitor",
             PanelKind::Timecode => "Timecode",
+            PanelKind::Director => "Director",
+        }
+    }
+
+    /// The name JBD shows for a panel (the first JBD's names for its four areas).
+    pub fn jbd_title(self) -> &'static str {
+        match self {
+            PanelKind::Project => "Media",
+            PanelKind::Program => "Preview",
+            PanelKind::Properties => "Inspector",
+            PanelKind::Text => "Transcript",
+            p => p.title(),
         }
     }
     pub fn id(self) -> String {
@@ -159,7 +174,37 @@ fn vsplit(size: SplitSize, a: DockNode, b: DockNode) -> DockNode {
     DockNode::Split { vertical: true, size, a: Box::new(a), b: Box::new(b) }
 }
 
-pub const WORKSPACES: [&str; 9] = ["Editing", "Assembly", "Color", "Effects", "Audio", "Captions and Graphics", "Learning", "Review", "All Panels"];
+pub const WORKSPACES: [&str; 10] = ["JBD", "Editing", "Assembly", "Color", "Effects", "Audio", "Captions and Graphics", "Learning", "Review", "All Panels"];
+
+/// Which of JBD's side areas show (the title bar's layout buttons, View menu).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct JbdAreas {
+    pub media: bool,
+    pub side: bool,
+    pub timeline: bool,
+}
+
+impl Default for JbdAreas {
+    fn default() -> Self {
+        JbdAreas { media: true, side: true, timeline: true }
+    }
+}
+
+/// JBD's layout, like the first JBD: Media on the left, the Preview in the middle, Inspector /
+/// Transcript / Director on the right, and the Timeline (with the tools beside it) across the
+/// bottom. `areas` hides the side areas; the Preview always shows.
+pub fn jbd_workspace(areas: JbdAreas) -> DockNode {
+    use PanelKind::*;
+    use SplitSize::*;
+    let preview = tabs(&[Program], 0);
+    let with_side = if areas.side { hsplit(FixedB(420.0), preview, tabs(&[Properties, Text, Director, EffectControls, Effects], 0)) } else { preview };
+    let top = if areas.media { hsplit(FixedA(420.0), tabs(&[Project], 0), with_side) } else { with_side };
+    if areas.timeline {
+        vsplit(Ratio(0.60), top, hsplit(FixedA(52.0), tabs(&[Tools], 0), hsplit(FixedB(96.0), tabs(&[Timeline], 0), tabs(&[AudioMeters], 0))))
+    } else {
+        top
+    }
+}
 
 /// The default layout of a named workspace.
 pub fn workspace(name: &str) -> DockNode {
@@ -167,6 +212,7 @@ pub fn workspace(name: &str) -> DockNode {
     use SplitSize::*;
     let bottom_editing = || hsplit(FixedA(64.0), tabs(&[Tools], 0), hsplit(FixedB(116.0), tabs(&[Timeline], 0), tabs(&[AudioMeters], 0)));
     match name {
+        "JBD" => jbd_workspace(JbdAreas::default()),
         "Assembly" => vsplit(
             Ratio(0.52),
             hsplit(
@@ -402,7 +448,7 @@ pub fn layout(ui: &mut egui::Ui, node: &mut DockNode, rect: Rect, t: &Tokens, pa
 }
 
 /// Draw a group's frame + tab strip. Returns actions (tab clicks, panel menu, focus).
-pub fn draw_group_chrome(ui: &mut egui::Ui, g: &Group, focused: PanelKind, t: &Tokens, reg: &mut crate::automation::Registry) -> Vec<DockAction> {
+pub fn draw_group_chrome(ui: &mut egui::Ui, g: &Group, focused: PanelKind, t: &Tokens, reg: &mut crate::automation::Registry, jbd: bool) -> Vec<DockAction> {
     let mut actions = Vec::new();
     let painter = ui.painter().clone();
     painter.rect_filled(g.rect, t.radius, t.panel_bg);
@@ -420,7 +466,8 @@ pub fn draw_group_chrome(ui: &mut egui::Ui, g: &Group, focused: PanelKind, t: &T
         let text_y = strip.min.y + 16.0;
         for (i, p) in g.panels.iter().enumerate() {
             let is_active = i == g.active;
-            let galley = painter.layout_no_wrap(p.title().to_string(), Tokens::ui(12.0), if is_active { t.tab_text_active } else { t.tab_text });
+            let name = if jbd { p.jbd_title() } else { p.title() };
+            let galley = painter.layout_no_wrap(name.to_string(), Tokens::medium(12.0), if is_active { t.tab_text_active } else { t.tab_text });
             let menu_w = if is_active { 20.0 } else { 0.0 };
             let w = galley.size().x + 16.0 + menu_w;
             if x + w > strip.max.x - 20.0 && i > g.active {
@@ -436,7 +483,7 @@ pub fn draw_group_chrome(ui: &mut egui::Ui, g: &Group, focused: PanelKind, t: &T
             }
             let tab = Rect::from_min_size(pos2(x, strip.min.y), vec2(w, t.tab_h));
             let resp = ui.interact(tab, egui::Id::new(("tab", g.path.clone(), i)), Sense::click());
-            reg.add(&format!("panel.tab.{}", p.id()), tab, p.title());
+            reg.add(&format!("panel.tab.{}", p.id()), tab, name);
             let label_x = tab.min.x + 8.0;
             let label_w = galley.size().x;
             let col = if is_active || resp.hovered() { t.tab_text_active } else { t.tab_text };
@@ -449,9 +496,10 @@ pub fn draw_group_chrome(ui: &mut egui::Ui, g: &Group, focused: PanelKind, t: &T
                 for dy in [-3.5, 0.0, 3.5] {
                     painter.line_segment([pos2(mr.min.x, mr.center().y + dy), pos2(mr.max.x, mr.center().y + dy)], Stroke::new(1.5, mc));
                 }
-                // 1 pt underline spanning label + ≡, 23 pt below the frame top
-                let uy = strip.min.y + 23.0;
-                painter.line_segment([pos2(label_x, uy), pos2(mr.max.x, uy)], Stroke::new(1.0, t.tab_text_active));
+                // JBD: the active tab gets the same 2 pt white bar on the strip's bottom edge as
+                // the active mode in the header (not an underline under the text)
+                let uy = strip.max.y - 1.0;
+                painter.line_segment([pos2(label_x - 2.0, uy), pos2(mr.max.x + 2.0, uy)], Stroke::new(2.0, t.tab_text_active));
                 if mresp.clicked() {
                     actions.push(DockAction::PanelMenu(*p, mr.left_bottom()));
                 }

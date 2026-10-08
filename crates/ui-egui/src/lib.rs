@@ -15,6 +15,8 @@ pub mod frames;
 pub mod header;
 pub mod i18n;
 pub mod icons;
+/// JBD (Jabrod): launch screen, account, plan.
+pub mod jbd;
 pub mod links;
 pub mod menus;
 pub mod panels;
@@ -195,6 +197,8 @@ pub struct FilmcraftApp {
     watched_render: Option<(u64, Tick)>,
     /// Settings last applied to the UI (theme, tooltips, frame cache, audio device).
     applied_prefs: Option<filmcraft_engine::autosave::Preferences>,
+    /// JBD: the launch screen, the Jabrod account and the plan (off unless [`Self::with_account`]).
+    pub jbd: jbd::JbdState,
 }
 
 pub struct GpuState {
@@ -369,7 +373,27 @@ impl FilmcraftApp {
             gpu: None,
             watched_render: None,
             applied_prefs: None,
+            jbd: Default::default(),
         }
+    }
+
+    /// Turn on JBD's layer: the launch screen (`splash`), signing in with a Jabrod account before
+    /// the editor opens, the account menu and the plan's export limits. See [`jbd`].
+    pub fn with_account(mut self, account: std::sync::Arc<dyn jbd_account::AccountBackend>, splash: bool) -> Self {
+        self.jbd = jbd::JbdState::new(account, splash);
+        jbd::apply_palette(&mut self.session);
+        // JBD's layout, and the start screen unless a project was opened from the command line
+        self.ui.workspace = "JBD".into();
+        self.ui.dock = dock::jbd_workspace(self.jbd.areas);
+        if self.session.path.is_none() {
+            self.ui.mode = state::Mode::Import;
+        }
+        self
+    }
+
+    /// The graphics card the GPU compositor runs on (None: compositing on the CPU).
+    pub fn gpu_adapter_name(&self) -> Option<String> {
+        self.gpu.as_ref().map(|g| g.render_state.adapter.get_info().name)
     }
 
     pub fn with_control(mut self, rx: Receiver<ControlRequest>) -> Self {
@@ -1046,20 +1070,30 @@ impl FilmcraftApp {
         let t = self.tokens;
         let full = ui.max_rect();
         ui.painter().rect_filled(full, 0.0, t.app_bg);
-        let header_h = 38.0;
+        // JBD: its own title bar (the window has no system frame) and a slimmer status bar
+        let jbd_on = self.jbd.enabled();
+        let header_h = if jbd_on { jbd::titlebar::HEIGHT } else { 38.0 };
         let header = egui::Rect::from_min_size(full.min, egui::vec2(full.width(), header_h));
-        header::show(self, ui, header);
+        if jbd_on {
+            jbd::titlebar::show(self, ui, header);
+        } else {
+            header::show(self, ui, header);
+        }
         let status_h = 20.0;
         let body = egui::Rect::from_min_max(egui::pos2(full.min.x + 1.0, header.max.y + 1.0), egui::pos2(full.max.x - 1.0, full.max.y - status_h - 2.0));
         match self.ui.mode {
             state::Mode::Edit => self.dock_area(ui, body),
+            state::Mode::Import if jbd_on => jbd::welcome::show(self, ui, body),
             state::Mode::Import => panels::import_mode::show(self, ui, body),
             state::Mode::Export => panels::export_mode::show(self, ui, body),
         }
         panels::dialogs::show(self, &ctx);
         // Status / hint bar
         let sb = egui::Rect::from_min_max(egui::pos2(full.min.x, full.max.y - status_h), full.max);
-        ui.painter().rect_filled(sb, 0.0, egui::Color32::from_rgb(0x1c, 0x1c, 0x1c));
+        ui.painter().rect_filled(sb, 0.0, if jbd_on { t.app_bg } else { egui::Color32::from_rgb(0x1c, 0x1c, 0x1c) });
+        if jbd_on {
+            ui.painter().line_segment([sb.left_top(), sb.right_top()], egui::Stroke::new(1.0, t.separator));
+        }
         let now = ui.input(|i| i.time);
         if self.ui.status != self.status_seen.0 {
             self.status_seen = (self.ui.status.clone(), now);
@@ -1070,7 +1104,13 @@ impl FilmcraftApp {
                 ui.ctx().request_repaint_after(std::time::Duration::from_secs(1));
             }
         }
-        let hint = if !self.ui.status.is_empty() { self.ui.status.clone() } else { self.hint_text() };
+        let hint = if !self.ui.status.is_empty() {
+            self.ui.status.clone()
+        } else if jbd_on && self.ui.mode != state::Mode::Edit {
+            String::new()
+        } else {
+            self.hint_text()
+        };
         ui.painter().text(egui::pos2(sb.min.x + 10.0, sb.center().y), egui::Align2::LEFT_CENTER, hint, Tokens::ui(11.0), t.text_dim);
         let resp = ui.interact(sb, egui::Id::new("status-bar"), egui::Sense::click());
         if resp.clicked() {
@@ -1126,7 +1166,10 @@ impl FilmcraftApp {
     /// Contextual hint for the status bar (Premiere shows tool/gesture hints here).
     fn hint_text(&self) -> String {
         match self.ui.tool {
-            state::Tool::Selection => "Click to select, or click in empty space and drag to marquee select. Use Shift, Opt, and Cmd for other options.",
+            state::Tool::Selection if cfg!(target_os = "macos") => {
+                "Click to select, or click in empty space and drag to marquee select. Use Shift, Opt, and Cmd for other options."
+            }
+            state::Tool::Selection => "Click to select, or click in empty space and drag to marquee select. Use Shift, Alt, and Ctrl for other options.",
             state::Tool::TrackSelectForward => "Click to select all clips to the right in all tracks. Shift-click for a single track.",
             state::Tool::TrackSelectBackward => "Click to select all clips to the left in all tracks. Shift-click for a single track.",
             state::Tool::Ripple => "Drag an edit point to ripple trim; later clips move to keep the gap closed.",
@@ -1155,7 +1198,7 @@ impl FilmcraftApp {
         dock::layout(ui, &mut dock, body, &t, "", &mut groups, &mut self.auto);
         let mut actions = Vec::new();
         for g in &groups {
-            actions.extend(dock::draw_group_chrome(ui, g, self.ui.focused, &t, &mut self.auto));
+            actions.extend(dock::draw_group_chrome(ui, g, self.ui.focused, &t, &mut self.auto, self.jbd.enabled()));
         }
         if maximized.is_none() {
             self.ui.dock = dock;
@@ -1166,6 +1209,17 @@ impl FilmcraftApp {
             let mut child = ui.new_child(egui::UiBuilder::new().max_rect(g.content).id_salt(("panel", p.id())));
             child.set_clip_rect(g.content);
             panels::show(self, &mut child, p, g.content);
+            // JBD extras over FilmCraft's panels
+            if self.jbd.enabled() {
+                match p {
+                    PanelKind::Project => {
+                        let strip = egui::Rect::from_min_size(g.rect.min, egui::vec2(g.rect.width(), t.tab_h));
+                        jbd::media_toolbar(self, ui, strip);
+                    }
+                    PanelKind::Program => jbd::preview_badge(self, ui, g.content),
+                    _ => {}
+                }
+            }
         }
         for a in actions {
             match a {
@@ -1290,13 +1344,16 @@ impl eframe::App for FilmcraftApp {
         // No frame worker threads on the web: render queued frames here, within a time budget
         // that leaves room for the UI pass (a no-op where workers run).
         self.frames.pump(std::time::Duration::from_millis(if self.playback.playing { 24 } else { 40 }));
+        // JBD: the launch screen and the sign-in screen come before the editor.
+        let covered = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| jbd::gate(self, ui))).unwrap_or(false);
         // A panic in one panel must not close the app (losing unsaved work) or leave a blank
         // window: catch it, keep the session, and say what happened.
-        if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.frame(ui))).is_err() {
+        if !covered && std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.frame(ui))).is_err() {
             self.ui_error = Some(crash::take_last().unwrap_or_else(|| "unknown error".into()));
             self.playback.playing = false;
         }
         self.error_window(ui.ctx());
+        jbd::after_frame(self, ui);
         let ctx = ui.ctx().clone();
         self.last_ui_time = ctx.input(|i| i.time);
         if !self.synthetic.is_empty() {

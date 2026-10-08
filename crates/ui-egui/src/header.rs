@@ -1,5 +1,9 @@
-//! The header bar (Premiere 26 layout, 38 pt): Home and Import / Edit / Export on the left, the
-//! document title centred, the workspace name and quick actions on the right. On macOS the menus
+//! The header bar (38 pt): Home and Import / Edit / Export on the left, the document title
+//! centred, the JBD account chip, the workspace name and quick actions on the right.
+//!
+//! JBD type rule for the header: every label (mode tabs, menus, title) is 13 pt Geist Medium; the
+//! active mode is white with a 2 pt white bar on the header's bottom edge (the same indicator the
+//! panel tabs use, see dock.rs), inactive ones are grey. On macOS the menus
 //! live in the native menu bar (set up by the app); elsewhere a compact in-window menu bar follows
 //! the mode tabs.
 
@@ -36,10 +40,10 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         app.ui.mode = Mode::Import;
     }
     x = home.max.x + 16.0;
-    // Mode tabs (14 pt; active = primary text with a 2 pt underline under the label)
+    // Mode tabs (13 pt medium; active = white with a 2 pt bar on the header's bottom edge)
     for (m, label) in [(Mode::Import, "Import"), (Mode::Edit, "Edit"), (Mode::Export, "Export")] {
         let active = app.ui.mode == m;
-        let galley = p.layout_no_wrap(label.to_string(), Tokens::ui(14.0), if active { t.tab_text_active } else { t.tab_text });
+        let galley = p.layout_no_wrap(label.to_string(), Tokens::medium(13.0), if active { t.tab_text_active } else { t.tab_text });
         let r = Rect::from_min_size(pos2(x - 6.0, rect.min.y + 6.0), vec2(galley.size().x + 12.0, rect.height() - 12.0));
         let resp = ui.interact(r, egui::Id::new(("mode", label)), Sense::click());
         app.auto.add(&format!("header.mode.{}", label.to_ascii_lowercase()), r, label);
@@ -47,7 +51,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         let gw = galley.size().x;
         p.galley_with_override_text_color(pos2(x, rect.center().y - galley.size().y / 2.0), galley, col);
         if active {
-            p.line_segment([pos2(x, rect.min.y + 29.0), pos2(x + gw, rect.min.y + 29.0)], Stroke::new(2.0, t.tab_text_active));
+            p.line_segment([pos2(x, rect.max.y - 1.0), pos2(x + gw, rect.max.y - 1.0)], Stroke::new(2.0, t.tab_text_active));
         }
         if resp.clicked() {
             app.ui.mode = m;
@@ -62,6 +66,9 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         mu.style_mut().visuals.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
         mu.style_mut().visuals.widgets.inactive.bg_stroke = Stroke::NONE;
         mu.style_mut().visuals.override_text_color = Some(t.text_dim);
+        // the same 13 pt medium as the mode tabs and the title
+        mu.style_mut().text_styles.insert(egui::TextStyle::Button, Tokens::medium(13.0));
+        mu.style_mut().text_styles.insert(egui::TextStyle::Body, Tokens::medium(13.0));
         crate::menus::menu_bar(app, &mut mu);
         left_end = mu.min_rect().max.x;
     }
@@ -108,14 +115,15 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     let wresp = ui.interact(wr, egui::Id::new("hdr-ws-name"), Sense::click());
     app.auto.add("header.workspaceName", wr, &ws);
     p.galley_with_override_text_color(pos2(wr.min.x + 4.0, rect.center().y - wg.size().y / 2.0), wg, if wresp.hovered() { t.text } else { t.text_dim });
-    // The title, centred in the gap between the menus and the workspace name. (FilmCraft has a
-    // Discord button here; JBD's account and Pro button will take this spot in J2.)
+    // The JBD account chip (avatar + plan), left of the workspace name.
+    let chip = crate::jbd::account::header_chip(app, ui, wr.min.x - 10.0, rect.center().y);
+    // The title, centred in the gap between the menus and the account chip.
     {
         // Localized menus and user titles can be wider than English. Use the actual gap.
         let left = left_end + 12.0;
-        let right = wr.min.x - 12.0;
+        let right = chip.map_or(wr.min.x, |c| c.min.x) - 12.0;
         if right > left + 40.0 {
-            let mut job = egui::text::LayoutJob::simple_singleline(title, Tokens::ui(14.0), t.tab_text_active);
+            let mut job = egui::text::LayoutJob::simple_singleline(title, Tokens::medium(13.0), t.tab_text_active);
             job.wrap.max_width = right - left;
             job.wrap.max_rows = 1;
             let galley = p.layout_job(job);

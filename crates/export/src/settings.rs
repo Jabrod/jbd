@@ -355,6 +355,9 @@ impl ExportSettings {
             Some((w, h)) => (w.max(2), h.max(2)),
             None => (((seq_w as f32 * self.scale).round() as u32).max(2), ((seq_h as f32 * self.scale).round() as u32).max(2)),
         };
+        if self.jbd_free {
+            (w, h) = free_plan_size(w, h);
+        }
         if !self.is_image_sequence() && self.format != Format::Gif {
             w &= !1;
             h &= !1;
@@ -536,5 +539,48 @@ pub fn format_bytes(b: u64) -> String {
         format!("{:.0} MB", b / 1e6)
     } else {
         format!("{:.0} KB", (b / 1e3).max(1.0))
+    }
+}
+
+/// The JBD Free plan's largest output: 720 pixels on the short side (1280×720 landscape,
+/// 720×1280 vertical), the aspect ratio kept. Smaller frames are left as they are.
+pub const FREE_PLAN_SHORT_SIDE: u32 = 720;
+
+/// `w`×`h` scaled down so the short side is at most [`FREE_PLAN_SHORT_SIDE`].
+pub fn free_plan_size(w: u32, h: u32) -> (u32, u32) {
+    let short = w.min(h);
+    if short <= FREE_PLAN_SHORT_SIDE || short == 0 {
+        return (w, h);
+    }
+    let k = FREE_PLAN_SHORT_SIDE as f64 / short as f64;
+    // round to even sizes (4:2:0 video needs them) and never below 2
+    let even = |v: u32| (((v as f64 * k / 2.0).round() as u32) * 2).max(2);
+    (even(w), even(h))
+}
+
+#[cfg(test)]
+mod free_plan_tests {
+    use super::*;
+
+    #[test]
+    fn free_plan_caps_the_short_side_at_720() {
+        assert_eq!(free_plan_size(1920, 1080), (1280, 720));
+        assert_eq!(free_plan_size(3840, 2160), (1280, 720));
+        assert_eq!(free_plan_size(1080, 1920), (720, 1280));
+        assert_eq!(free_plan_size(1080, 1080), (720, 720));
+        // already small enough: unchanged
+        assert_eq!(free_plan_size(1280, 720), (1280, 720));
+        assert_eq!(free_plan_size(640, 360), (640, 360));
+        assert_eq!(free_plan_size(0, 0), (0, 0));
+    }
+
+    #[test]
+    fn free_plan_applies_through_resolve() {
+        let s = ExportSettings { jbd_free: true, ..Default::default() };
+        let r = s.resolve(3840, 2160, FrameRate::new(30, 1), 48_000);
+        assert_eq!((r.width, r.height), (1280, 720));
+        let pro = ExportSettings::default();
+        let r = pro.resolve(3840, 2160, FrameRate::new(30, 1), 48_000);
+        assert_eq!((r.width, r.height), (3840, 2160));
     }
 }

@@ -1,0 +1,35 @@
+JBD - Licence terms
+Copyright (c) Jabrod. All rights reserved.
+
+These terms apply to JBD, the video editor made by Jabrod. By installing or using JBD you agree
+to them, and to the Jabrod Terms of Service and Privacy Policy:
+
+    https://jabrod.com/terms
+    https://jabrod.com/privacy
+
+1. Your licence. Jabrod lets you install and use JBD on your own computers for personal and
+   commercial video work. You may not sell, rent or redistribute JBD, or remove its notices.
+
+2. Your account. JBD needs a free Jabrod account. Signing in happens on jabrod.com in your
+   browser; JBD never sees your password. JBD checks your account with jabrod.com from time to
+   time and keeps working offline for up to 14 days.
+
+3. Plans. JBD Free lets you use the whole editor and export up to 720p with a small
+   "Made with JBD" mark. JBD Pro (bought on jabrod.com) removes the mark, unlocks 1080p and 4K
+   exports and every preset, and includes a monthly allowance of AI requests. New accounts get
+   JBD Pro free for 7 days. Prices, payments and refunds are described on jabrod.com.
+
+4. Your work. Your videos, projects and media stay yours. JBD edits them on your computer.
+   AI features send only what they need to jabrod.com to work, as the Privacy Policy explains.
+
+5. Open-source software. JBD includes open-source software and fonts used under their own
+   licences, listed in THIRD-PARTY-NOTICES.txt (also in Help > Third-Party Licences). Those
+   licences, not these terms, govern those parts.
+
+6. No warranty. JBD is provided "as is", without warranties of any kind. As far as the law
+   allows, Jabrod is not liable for indirect or consequential losses, including lost work.
+   Save your projects and keep copies of your media.
+
+7. Updates. JBD may tell you about updates. The Microsoft Store version is updated by the Store.
+
+Questions: contact@jabrod.com

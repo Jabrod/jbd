@@ -227,9 +227,9 @@ fn delete_tracks(app: &mut FilmcraftApp, ctx: &egui::Context) -> bool {
 }
 
 /// Help ▸ About JBD: version, the jabrod.com links (JBD's page is the first, accented button),
-/// support, and the credit to FilmCraft, the open-source editor JBD is built on.
+/// support, the terms, and the third-party licences.
 ///
-/// Automation ids: `about.appPage`, `about.support`, `about.website`, `about.filmcraft`.
+/// Automation ids: `about.appPage`, `about.support`, `about.website`, `about.terms`, `about.licences`.
 fn about(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
     use crate::icons::{self, Icon};
     use crate::links;
@@ -273,13 +273,12 @@ fn about(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
     ui.add_space(6.0);
     link(ui, "support", Icon::Chat, "Contact support", links::SUPPORT, false);
     link(ui, "website", Icon::Globe, "jabrod.com", links::WEBSITE, false);
-    link(ui, "filmcraft", Icon::Code, "Built on FilmCraft (open source)", links::FILMCRAFT, false);
+    link(ui, "terms", Icon::Info, "Terms and privacy", links::TERMS, false);
+    let lr = ui.add(egui::Button::new(egui::RichText::new("Third-party licences").color(t.text_dim)).frame(false));
+    app.auto.add("about.licences", lr.rect, "Third-party licences");
+    if lr.clicked() {
+        crate::jbd::licences::open(app);
+    }
     ui.add_space(10.0);
-    ui.label(
-        egui::RichText::new(
-            "© Jabrod. Built on FilmCraft, © the FilmCraft contributors (MIT OR Apache-2.0). Fonts: Inter, Noto Serif and JetBrains Mono (SIL OFL 1.1).",
-        )
-        .small()
-        .color(t.text_dim),
-    );
+    ui.label(egui::RichText::new("© Jabrod. JBD includes open-source software and fonts: see Third-party licences.").small().color(t.text_dim));
 }

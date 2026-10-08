@@ -1,7 +1,18 @@
 //! Design tokens. Every widget reads colours/sizes from [`Tokens`] so themes apply everywhere.
 //!
-//! The default theme follows the look of Premiere Pro's current dark UI (values measured from
-//! black-box screenshots, see `plan/premiere/02-ui-ux.md`); fonts are Inter + JetBrains Mono (OFL).
+//! The default theme is JBD's black-and-white Jabrod look (see the dark tokens in
+//! [`Tokens::for_kind`]); the Medium and Light variants derive from it.
+//!
+//! JBD's type system, the same as jabrod.com (all SIL OFL 1.1, in `assets/jbd/fonts/`):
+//!
+//! | Use | Font | Helper |
+//! |---|---|---|
+//! | Everything in the UI | Geist Regular / Medium / SemiBold | [`Tokens::ui`], [`Tokens::medium`], [`Tokens::semibold`] |
+//! | Timecodes, numbers in columns | Geist Mono | [`Tokens::mono`] |
+//! | The JBD wordmark, big titles | Archivo Black | [`Tokens::display`] |
+//!
+//! The scale: 12 pt body and controls, 13 pt for the header (mode tabs, menus, title), 11 pt
+//! small print, 15 pt dialog headings. Don't invent sizes in panels: use these.
 
 use std::sync::Arc;
 
@@ -123,7 +134,7 @@ impl Tokens {
             tab_bg: panel,
             tab_text: grey,
             tab_text_active: white,
-            focus: Color32::from_rgb(0xd4, 0xd4, 0xd8), // --ring: a light frame, not a colour
+            focus: line_strong, // the focused panel's frame: a quiet hairline
             accent: blue,
             accent_hover: Color32::from_rgb(0x56, 0x72, 0xff),
             text: white,
@@ -239,29 +250,60 @@ impl Tokens {
     pub fn ui(size: f32) -> FontId {
         FontId::new(size, FontFamily::Proportional)
     }
+    pub fn medium(size: f32) -> FontId {
+        FontId::new(size, FontFamily::Name("medium".into()))
+    }
     pub fn semibold(size: f32) -> FontId {
         FontId::new(size, FontFamily::Name("semibold".into()))
+    }
+    /// Archivo Black: the JBD wordmark and big display titles only.
+    pub fn display(size: f32) -> FontId {
+        FontId::new(size, FontFamily::Name("display".into()))
     }
 }
 
 /// Every font family the theme defines (fallback fonts such as the Japanese fonts are added to each
 /// of them).
 pub fn font_families() -> Vec<FontFamily> {
-    vec![FontFamily::Proportional, FontFamily::Monospace, FontFamily::Name("semibold".into()), FontFamily::Name("medium".into())]
+    vec![
+        FontFamily::Proportional,
+        FontFamily::Monospace,
+        FontFamily::Name("semibold".into()),
+        FontFamily::Name("medium".into()),
+        FontFamily::Name("display".into()),
+    ]
 }
 
-/// Install fonts (Inter, Inter SemiBold, JetBrains Mono, then the Japanese craft-fonts when built with
-/// `CRAFT_FONTS_DIR`) and egui visuals.
+const GEIST_REGULAR: &[u8] = include_bytes!("../../../assets/jbd/fonts/Geist-Regular.ttf");
+const GEIST_MEDIUM: &[u8] = include_bytes!("../../../assets/jbd/fonts/Geist-Medium.ttf");
+const GEIST_SEMIBOLD: &[u8] = include_bytes!("../../../assets/jbd/fonts/Geist-SemiBold.ttf");
+const GEIST_MONO: &[u8] = include_bytes!("../../../assets/jbd/fonts/GeistMono-Regular.ttf");
+const ARCHIVO_BLACK: &[u8] = include_bytes!("../../../assets/jbd/fonts/ArchivoBlack-Regular.ttf");
+
+/// Install fonts (Geist, Geist Mono, Archivo Black; Inter stays as a fallback for characters
+/// Geist lacks; then the Japanese craft-fonts when built with `CRAFT_FONTS_DIR`) and egui visuals.
 pub fn install(ctx: &egui::Context, t: &Tokens) {
     let mut fonts = FontDefinitions::default();
+    fonts.font_data.insert("geist".into(), Arc::new(FontData::from_static(GEIST_REGULAR)));
+    fonts.font_data.insert("geist-medium".into(), Arc::new(FontData::from_static(GEIST_MEDIUM)));
+    fonts.font_data.insert("geist-semibold".into(), Arc::new(FontData::from_static(GEIST_SEMIBOLD)));
+    fonts.font_data.insert("geist-mono".into(), Arc::new(FontData::from_static(GEIST_MONO)));
+    fonts.font_data.insert("archivo-black".into(), Arc::new(FontData::from_static(ARCHIVO_BLACK)));
     fonts.font_data.insert("inter".into(), Arc::new(FontData::from_static(filmcraft_text::fonts::INTER_REGULAR)));
-    fonts.font_data.insert("inter-medium".into(), Arc::new(FontData::from_static(filmcraft_text::fonts::INTER_MEDIUM)));
-    fonts.font_data.insert("inter-semibold".into(), Arc::new(FontData::from_static(filmcraft_text::fonts::INTER_SEMIBOLD)));
     fonts.font_data.insert("jbmono".into(), Arc::new(FontData::from_static(filmcraft_text::fonts::JETBRAINS_MONO_REGULAR)));
-    fonts.families.entry(FontFamily::Proportional).or_default().insert(0, "inter".into());
-    fonts.families.entry(FontFamily::Monospace).or_default().insert(0, "jbmono".into());
-    fonts.families.insert(FontFamily::Name("semibold".into()), vec!["inter-semibold".into(), "inter".into()]);
-    fonts.families.insert(FontFamily::Name("medium".into()), vec!["inter-medium".into(), "inter".into()]);
+    {
+        let prop = fonts.families.entry(FontFamily::Proportional).or_default();
+        prop.insert(0, "geist".into());
+        prop.insert(1, "inter".into());
+    }
+    {
+        let mono = fonts.families.entry(FontFamily::Monospace).or_default();
+        mono.insert(0, "geist-mono".into());
+        mono.insert(1, "jbmono".into());
+    }
+    fonts.families.insert(FontFamily::Name("semibold".into()), vec!["geist-semibold".into(), "geist".into(), "inter".into()]);
+    fonts.families.insert(FontFamily::Name("medium".into()), vec!["geist-medium".into(), "geist".into(), "inter".into()]);
+    fonts.families.insert(FontFamily::Name("display".into()), vec!["archivo-black".into(), "geist-semibold".into(), "inter".into()]);
     add_craft_fonts(&mut fonts);
     ctx.set_fonts(fonts);
     apply_visuals(ctx, t);
@@ -281,7 +323,7 @@ fn add_craft_fonts(fonts: &mut FontDefinitions) {
         fonts.font_data.insert(craft_font_name(f), Arc::new(FontData::from_static(f.bytes)));
     }
     for (family, stack) in fonts.families.iter_mut() {
-        let heavy = matches!(family, FontFamily::Name(n) if matches!(n.as_ref(), "semibold" | "medium"));
+        let heavy = matches!(family, FontFamily::Name(n) if matches!(n.as_ref(), "semibold" | "medium" | "display"));
         let mut order = jpan.clone();
         order.sort_by_key(|f| (!f.family.contains("Gothic"), (f.style == "Bold") != heavy));
         stack.extend(order.iter().map(|f| craft_font_name(f)));
@@ -391,8 +433,8 @@ mod tests {
         ctx.fonts_mut(|fonts| {
             let defs = fonts.definitions().clone();
             assert_eq!(defs.font_data.keys().filter(|k| k.starts_with("craft:")).count(), n);
-            assert_eq!(defs.families[&FontFamily::Proportional].first().map(String::as_str), Some("inter"));
-            assert_eq!(defs.families[&FontFamily::Monospace].first().map(String::as_str), Some("jbmono"));
+            assert_eq!(defs.families[&FontFamily::Proportional].first().map(String::as_str), Some("geist"));
+            assert_eq!(defs.families[&FontFamily::Monospace].first().map(String::as_str), Some("geist-mono"));
             assert!(fonts.has_glyph(&FontId::new(13.0, FontFamily::Proportional), 'A'));
             if n == 0 {
                 assert!(defs.families.values().flatten().all(|name| !name.starts_with("craft:")));

@@ -46,6 +46,49 @@ fn app_icon() -> egui::IconData {
     eframe::icon_data::from_png_bytes(png).unwrap_or_default()
 }
 
+/// The Jabrod account behind JBD: the real one (jabrod.com, Windows Credential Manager), or, in
+/// debug builds only and when `JBD_DEMO_ACCOUNT=1` is set, a signed-in Pro demo account that never
+/// touches the network (screenshots, the launch video). Release builds ignore the variable, so the
+/// demo account can't unlock Pro in JBD as shipped.
+fn account_backend(data_dir: Option<std::path::PathBuf>) -> std::sync::Arc<dyn jbd_account::AccountBackend> {
+    if cfg!(debug_assertions) && std::env::var_os("JBD_DEMO_ACCOUNT").is_some() {
+        let name = std::env::var("JBD_DEMO_NAME").unwrap_or_else(|_| "Riya Sharma".into());
+        return std::sync::Arc::new(jbd_account::DemoAccount::new(&name, "riya@example.com"));
+    }
+    std::sync::Arc::new(jbd_account::native::JabrodAccount::start(jbd_account::native::os_store(data_dir)))
+}
+
+/// The title bar's CPU and GPU meters: whole-computer CPU load (sysinfo) and, on Windows, the
+/// GPU's 3D engine load from the same counters Task Manager uses (filmcraft_platform::win_gpu).
+fn usage_meter() -> impl FnMut() -> filmcraft_ui_egui::jbd::SystemUsage + Send {
+    let mut sys = sysinfo::System::new();
+    // CPU load is measured between two readings: take the first one now
+    sys.refresh_cpu_usage();
+    #[cfg(windows)]
+    let mut gpu = filmcraft_platform::win_gpu::GpuCounters::open();
+    move || {
+        sys.refresh_cpu_usage();
+        let cpu = Some(sys.global_cpu_usage());
+        #[cfg(windows)]
+        let gpu = gpu.as_mut().and_then(|g| g.sample().0).map(|v| v as f32);
+        #[cfg(not(windows))]
+        let gpu = None;
+        filmcraft_ui_egui::jbd::SystemUsage { cpu, gpu }
+    }
+}
+
+/// Windows: the taskbar and Alt-Tab icon. eframe only sets the window's small icon, so without
+/// this the taskbar shows Windows' generic program icon (see filmcraft_platform::win_icon).
+#[cfg(windows)]
+fn set_taskbar_icon(cc: &eframe::CreationContext<'_>) {
+    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+    if let Ok(handle) = cc.window_handle()
+        && let RawWindowHandle::Win32(w) = handle.as_raw()
+    {
+        filmcraft_platform::win_icon::set_window_icons_from_exe(w.hwnd.get());
+    }
+}
+
 /// Print `text` (stdout, or stderr for an error). A Windows release build has no console
 /// (`windows_subsystem = "windows"`), so there it is also shown in a message box: otherwise `--help`
 /// would print nothing and a bad option would quit without a word.
@@ -90,6 +133,8 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("JBD")
+            // Windows: no system frame; JBD draws its own title bar and window buttons (jbd/titlebar.rs)
+            .with_decorations(!cfg!(windows))
             .with_inner_size([1600.0, 980.0])
             .with_min_inner_size([900.0, 560.0])
             .with_drag_and_drop(true)
@@ -155,6 +200,13 @@ fn main() -> eframe::Result {
                 app.dialog = None;
             }
             app.integrated_titlebar = cfg!(target_os = "macos");
+            // JBD: the launch screen, then signing in with a Jabrod account, the account menu and
+            // the plan's export limits (filmcraft_ui_egui::jbd). JBD_NO_SPLASH=1 skips the splash.
+            let splash = std::env::var_os("JBD_NO_SPLASH").is_none();
+            app = app.with_account(account_backend(data_dir.clone().or_else(default_data_dir)), splash);
+            app.jbd.usage_source = Some(Box::new(usage_meter()));
+            #[cfg(windows)]
+            set_taskbar_icon(cc);
             if let Some(rs) = cc.wgpu_render_state.clone()
                 && std::env::var_os("FILMCRAFT_CPU_COMPOSITE").is_none()
             {

@@ -265,6 +265,11 @@ pub struct ExportSettings {
     /// writing `path` (hosts without a filesystem: the web app offers the file as a download).
     #[serde(skip)]
     pub sink: Option<OutputSink>,
+    /// JBD Free plan: the picture is capped at 720 pixels on its short side and carries the
+    /// "Made with JBD" mark (bottom-right; see [`pipeline::JBD_MARK`]). Set only by the engine
+    /// (`Session::plan`), never by presets or callers: `serde(skip)` drops it from every input.
+    #[serde(skip)]
+    pub jbd_free: bool,
 }
 
 /// Receives in-memory export output: `(path, bytes)` per finished file.
@@ -430,6 +435,7 @@ impl Default for ExportSettings {
             h264_pass: H264Pass::Single,
             signal: ColorSignal::default(),
             sink: None,
+            jbd_free: false,
         }
     }
 }

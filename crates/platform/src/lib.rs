@@ -27,6 +27,13 @@ pub mod hybrid;
 #[allow(unsafe_code)]
 pub mod videotoolbox;
 
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub mod win_gpu;
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub mod win_icon;
+
 pub use hybrid::HybridDecoder;
 
 /// What [`register`] made available.

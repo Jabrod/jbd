@@ -133,6 +133,23 @@ marks: FilmCraft's brand licence requires forks to remove them.
 | `assets/jbd/jbd-logo.png` | Jabrod (Anshuman) | Original work: the JBD cube logo (466x512, transparent), from the first JBD app (src/assets/jbd-logo.png) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
 | `assets/jbd/jbd-icon-256.png` | Jabrod (Anshuman) | Original work: the JBD app icon, full-bleed 256 px tile, from the first JBD app (src-tauri/icons) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
 | `assets/jbd/jbd.ico` | Jabrod (Anshuman) | Original work: the JBD app icon as a Windows .ico (16-256 px, taskbar-tuned), from the first JBD app (src-tauri/icons/icon.ico) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/cube-film.png` | Jabrod (Anshuman) | Original work: the JBD logo artwork, rendered from the first JBD's SVG faces by jbd-media/tools/cube-faces.cjs | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/cube-timeline.png` | Jabrod (Anshuman) | Original work: the JBD logo artwork, rendered from the first JBD's SVG faces by jbd-media/tools/cube-faces.cjs | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/cube-play.png` | Jabrod (Anshuman) | Original work: the JBD logo artwork, rendered from the first JBD's SVG faces by jbd-media/tools/cube-faces.cjs | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/cube-blank.png` | Jabrod (Anshuman) | Original work: the JBD logo artwork, rendered from the first JBD's SVG faces by jbd-media/tools/cube-faces.cjs | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/watermark.png` | Jabrod (Anshuman) | Original work: from the first JBD (src-tauri/resources/watermark.png, scripts/make-watermark.cjs) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/jbd-icon-1024.png` | Jabrod (Anshuman) | Original work: from the first JBD (src-tauri/icons/source/jbd-icon-1024.png) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/store/StoreLogo.png` | Jabrod (Anshuman) | Original work: from the first JBD (src-tauri/icons) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/store/Square44x44Logo.png` | Jabrod (Anshuman) | Original work: from the first JBD (src-tauri/icons) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/store/Square150x150Logo.png` | Jabrod (Anshuman) | Original work: from the first JBD (src-tauri/icons) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/store/Square310x310Logo.png` | Jabrod (Anshuman) | Original work: from the first JBD (src-tauri/icons) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/fonts/Geist-Regular.ttf` | Vercel, with basement.studio | https://github.com/vercel/geist-font | OFL-1.1 (`assets/jbd/fonts/OFL-Geist.txt`) |
+| `assets/jbd/fonts/Geist-Medium.ttf` | Vercel, with basement.studio | https://github.com/vercel/geist-font | OFL-1.1 (`assets/jbd/fonts/OFL-Geist.txt`) |
+| `assets/jbd/fonts/Geist-SemiBold.ttf` | Vercel, with basement.studio | https://github.com/vercel/geist-font | OFL-1.1 (`assets/jbd/fonts/OFL-Geist.txt`) |
+| `assets/jbd/fonts/Geist-Bold.ttf` | Vercel, with basement.studio | https://github.com/vercel/geist-font | OFL-1.1 (`assets/jbd/fonts/OFL-Geist.txt`) |
+| `assets/jbd/fonts/GeistMono-Regular.ttf` | Vercel, with basement.studio | https://github.com/vercel/geist-font | OFL-1.1 (`assets/jbd/fonts/OFL-Geist.txt`) |
+| `assets/jbd/fonts/GeistMono-Medium.ttf` | Vercel, with basement.studio | https://github.com/vercel/geist-font | OFL-1.1 (`assets/jbd/fonts/OFL-Geist.txt`) |
+| `assets/jbd/fonts/ArchivoBlack-Regular.ttf` | The Archivo Black Project Authors | https://github.com/google/fonts/tree/main/ofl/archivoblack | OFL-1.1 (`assets/jbd/fonts/OFL-ArchivoBlack.txt`) |
 
 ## Downloaded at runtime
 

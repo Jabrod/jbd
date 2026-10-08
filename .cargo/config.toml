@@ -1,2 +1,7 @@
 [alias]
 xtask = "run --quiet --package xtask --"
+
+# JBD: link the C runtime statically, so jbd.exe runs on PCs without the Visual C++
+# redistributable (the installer and the Store package ship only jbd.exe).
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

@@ -64,6 +64,8 @@ pub(crate) struct Pipeline {
     out_tf: Option<filmcraft_color::OutputTransform>,
     effects: ExportEffects,
     overlay: Option<Image>,
+    /// JBD Free: the "Made with JBD" mark, already scaled, and its top-left corner.
+    mark: Option<(Image, i64, i64)>,
     start_tc: i64,
     drop_frame: bool,
 }
@@ -82,6 +84,7 @@ impl Pipeline {
         } else {
             None
         };
+        let mark = if settings.jbd_free && settings.has_video() { Some(jbd_mark(r.width, r.height)?) } else { None };
         Ok(Pipeline {
             seq_rate: q.settings.frame_rate,
             start_tc: q.start_timecode,
@@ -97,6 +100,7 @@ impl Pipeline {
             out_tf,
             effects,
             overlay,
+            mark,
         })
     }
 
@@ -162,6 +166,10 @@ impl Pipeline {
             let o = &fx.image_overlay;
             let (x, y) = anchor(o.placement, o.offset, img.w as f32, img.h as f32, ov.w as f32, ov.h as f32);
             composite(img, ov, x.round() as i64, y.round() as i64, o.opacity / 100.0);
+        }
+        // last, so nothing covers it
+        if let Some((mark, x, y)) = &self.mark {
+            composite(img, mark, *x, *y, JBD_MARK_OPACITY);
         }
         if fx.name_overlay.enabled && !fx.name_overlay.text.trim().is_empty() {
             self.text(img, &fx.name_overlay, fx.name_overlay.text.trim());
@@ -236,7 +244,34 @@ fn composite(dst: &mut Image, src: &Image, x: i64, y: i64, opacity: f32) {
 /// Load a PNG / JPEG overlay as premultiplied linear light, `width` pixels wide.
 fn load_overlay(path: &str, width: f32) -> Result<Image> {
     let bytes = std::fs::read(path).map_err(|e| ExportError::Io(format!("image overlay {path}: {e}")))?;
-    let rgba = image::load_from_memory(&bytes).map_err(|e| ExportError::Unsupported(format!("image overlay {path}: {e}")))?.to_rgba8();
+    decode_overlay(&bytes, width).map_err(|e| ExportError::Unsupported(format!("image overlay {path}: {e}")))
+}
+
+/// The JBD Free watermark: the logo cube over "Made with JBD", white with a soft shadow on a
+/// transparent background (`assets/jbd/watermark.png`, a Jabrod trademark). Embedded, so no file
+/// or font has to exist on the user's computer.
+pub const JBD_MARK: &[u8] = include_bytes!("../../../assets/jbd/watermark.png");
+/// How opaque the mark is drawn (the first JBD used 85 %).
+const JBD_MARK_OPACITY: f32 = 0.85;
+
+/// The mark for a `w`×`h` output and its top-left corner. Sized from the SHORT side, so a
+/// vertical 720×1280 gets the same mark as a 1280×720: 10 % of it tall, inset 3.5 % from the
+/// bottom-right corner (the same layout as the first JBD's exports).
+fn jbd_mark(w: u32, h: u32) -> Result<(Image, i64, i64)> {
+    let short = w.min(h) as f32;
+    let mark_h = (short * 0.1).max(24.0);
+    let margin = (short * 0.035).round() as i64;
+    // decode once at full size to learn the aspect ratio, then scale to the wanted height
+    let probe = image::load_from_memory(JBD_MARK).map_err(|e| ExportError::Encode(format!("JBD mark: {e}")))?;
+    let mark_w = mark_h * probe.width() as f32 / probe.height().max(1) as f32;
+    let img = decode_overlay(JBD_MARK, mark_w).map_err(|e| ExportError::Encode(format!("JBD mark: {e}")))?;
+    let (x, y) = (w as i64 - img.w as i64 - margin, h as i64 - img.h as i64 - margin);
+    Ok((img, x.max(0), y.max(0)))
+}
+
+/// Decode a PNG / JPEG to premultiplied linear light, `width` pixels wide.
+fn decode_overlay(bytes: &[u8], width: f32) -> std::result::Result<Image, image::ImageError> {
+    let rgba = image::load_from_memory(bytes)?.to_rgba8();
     let (iw, ih) = (rgba.width() as usize, rgba.height() as usize);
     let mut img = Image::new(iw, ih);
     for (o, p) in img.px.as_chunks_mut::<4>().0.iter_mut().zip(rgba.as_raw().as_chunks::<4>().0) {

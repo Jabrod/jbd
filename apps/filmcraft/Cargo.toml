@@ -17,11 +17,15 @@ path = "src/main.rs"
 workspace = true
 
 [features]
-default = []
+# JBD ships with speech to text on (Text panel ▸ Transcribe; models download on first use).
+default = ["whisper"]
 # Speech-to-text (Text panel ▸ Transcribe) with Whisper on the CPU, and model downloads.
 whisper = ["filmcraft-engine/whisper", "filmcraft-engine/speech-download"]
 
 [dependencies]
+jbd-account = { workspace = true }
+# CPU load for the title-bar meter
+sysinfo = { version = "0.39", default-features = false, features = ["system"] }
 filmcraft-engine = { workspace = true }
 filmcraft-ui-egui = { workspace = true }
 filmcraft-platform = { workspace = true }
@@ -42,5 +46,9 @@ objc2 = "0.6"
 winit = { version = "0.30", default-features = false }
 
 # Icon + VERSIONINFO for jbd.exe (build.rs); only needed when building on Windows.
+# The window handle, to give the window the big taskbar icon (filmcraft_platform::win_icon).
+[target.'cfg(windows)'.dependencies]
+raw-window-handle = "0.6"
+
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"

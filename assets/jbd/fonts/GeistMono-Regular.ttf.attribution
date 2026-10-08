@@ -1,0 +1,8 @@
+asset:        GeistMono-Regular.ttf
+title:        Geist Mono Regular (JBD's UI typeface, as on jabrod.com)
+author:       Vercel, in collaboration with basement.studio
+source:       https://github.com/vercel/geist-font (npm package geist)
+license:      OFL-1.1
+license-file: assets/jbd/fonts/OFL-Geist.txt
+added:        2026-10-07
+notes:        Embedded in the UI by crates/ui-egui/src/theme.rs.

@@ -166,7 +166,7 @@ fn field_label(ui: &mut Ui, text: &str) {
     let w = LABEL_W.min(ui.available_width() * 0.45);
     ui.allocate_ui_with_layout(vec2(w, 24.0), Layout::right_to_left(Align::Center), |ui| {
         if !text.is_empty() {
-            ui.label(RichText::new(format!("{text}:")).size(12.5));
+            ui.label(RichText::new(format!("{}:", crate::jbd::platform_keys(text))).size(12.5));
         }
     });
 }
@@ -493,7 +493,8 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) -> bool {
         // title bar (Premiere keeps "Preferences" as the window title)
         let (bar, _) = ui.allocate_exact_size(vec2(W, 30.0), Sense::hover());
         ui.painter().rect_filled(bar, CornerRadius { nw: 10, ne: 10, sw: 0, se: 0 }, t.header_bg);
-        ui.painter().text(bar.center(), Align2::CENTER_CENTER, "Preferences", Tokens::semibold(13.0), t.text_dim);
+        let title = if app.jbd.enabled() { "All preferences" } else { "Preferences" };
+        ui.painter().text(bar.center(), Align2::CENTER_CENTER, title, Tokens::semibold(13.0), t.text_dim);
         app.auto.add("settings.window", bar, "Preferences");
         ui.add_space(14.0);
         ui.horizontal_top(|ui| {
@@ -537,7 +538,7 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) -> bool {
         ui.horizontal(|ui| {
             ui.add_space(20.0);
             if button(app, ui, "settings.help", "Help", false) {
-                crate::links::open(ctx, &format!("{}/blob/main/docs/project-files.md#settings", crate::links::FILMCRAFT));
+                crate::links::open(ctx, &format!("{}/blob/main/docs/project-files.md#settings", crate::links::APP_PAGE));
             }
             if button(app, ui, "settings.reset", "Reset…", false) {
                 // this category back to its defaults (OK applies it)
