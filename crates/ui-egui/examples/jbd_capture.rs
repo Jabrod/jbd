@@ -129,4 +129,56 @@ fn main() {
             save(&mut h, &out.join("export.png"));
         }
     }
+
+    // 5. more of the editor for the launch films: a title template, colour, effects, the mixer
+    if want("graphics") || want("color") || want("effects") || want("mixer") {
+        let mut h = harness(demo_app(false, true), ppp);
+        h.state_mut().ui.mode = Mode::Edit;
+        settle(&mut h, 40);
+        let app = h.state_mut();
+        let _ = app.session.execute("edit.selectAll", json!({}));
+        if want("graphics") {
+            let app = h.state_mut();
+            let _ = app.session.execute("graphics.template.apply", json!({"template": "builtin:lower-third-slab"}));
+            app.ui.dock.activate(PanelKind::EssentialGraphics);
+            settle(&mut h, 30);
+            save(&mut h, &out.join("graphics.png"));
+        }
+        if want("color") {
+            h.state_mut().show_panel(PanelKind::LumetriColor);
+            settle(&mut h, 30);
+            save(&mut h, &out.join("color.png"));
+        }
+        if want("effects") {
+            h.state_mut().show_panel(PanelKind::Effects);
+            settle(&mut h, 20);
+            save(&mut h, &out.join("effects.png"));
+        }
+        if want("mixer") {
+            h.state_mut().show_panel(PanelKind::AudioTrackMixer);
+            settle(&mut h, 20);
+            save(&mut h, &out.join("mixer.png"));
+        }
+    }
+
+    // 6. a vertical (9:16) project with a title, as made from the start screen's Vertical template
+    if want("vertical") {
+        let mut h = harness(demo_app(false, true), ppp);
+        let app = h.state_mut();
+        let _ = app.session.execute("file.newProject", json!({"name": "Reel"}));
+        let _ = app.session.execute("file.newSequence", json!({"name": "Reel", "width": 1080, "height": 1920, "fps": 30.0}));
+        if let Ok(v) = app.session.execute("file.importDemoFootage", json!({"scene": "OceanSunset"})) {
+            let item = v["items"].as_array().and_then(|a| a.first()).and_then(serde_json::Value::as_u64).or_else(|| v["item"].as_u64());
+            if let Some(item) = item {
+                let _ = filmcraft_ui_egui::jbd::add_to_timeline(app, item);
+            }
+        }
+        let app = h.state_mut();
+        app.session.set_playhead(filmcraft_time::Tick(0));
+        let _ = app.session.execute("graphics.newText", json!({"text": "Golden hour", "newClip": true}));
+        app.ui.mode = Mode::Edit;
+        app.ui.dock.activate(PanelKind::EssentialGraphics);
+        settle(&mut h, 60);
+        save(&mut h, &out.join("vertical.png"));
+    }
 }
