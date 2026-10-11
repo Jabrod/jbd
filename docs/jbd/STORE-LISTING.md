@@ -1,7 +1,7 @@
 # JBD — Microsoft Store listing (v1.0.0)
 
 Partner Center product: **JBD**, Store ID `9P0KS6185QSX`, package identity `Jabrod.JBD`
-(publisher `CN=B31502B4-249B-4B91-8E2D-5E7989531A54`). Upload `dist/jbd-1.0.0/JBD_1.0.0.0_x64.msix`
+(publisher `CN=B31502B4-249B-4B91-8E2D-5E7989531A54`). Upload `dist/jbd-1.0.0/JBD_1.0.1.0_x64.msix` (Store version 1.0.1.0)
 (unsigned; Microsoft signs it). Art: `jbd-media/out/store/`. Screenshots: `jbd-media/out/store/screenshots/`.
 
 Everything below describes what v1.0.0 does. The Director is described as coming next.

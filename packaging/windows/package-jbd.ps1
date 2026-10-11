@@ -18,10 +18,17 @@
 .EXAMPLE
   pwsh packaging/windows/package-jbd.ps1
   pwsh packaging/windows/package-jbd.ps1 -SkipBuild
+  pwsh packaging/windows/package-jbd.ps1 -SkipBuild -StoreOnly -StoreVersion 1.0.1.0
+
+  -StoreVersion sets the MSIX version on its own (a.b.c.0; Partner Center needs the fourth field 0
+  and a new version for every package uploaded to the product, even one never published).
+  -StoreOnly remakes only the MSIX and keeps the rest of dist (the signed installer) as it is.
 #>
 param(
   [switch] $SkipBuild,
-  [string] $MakeNsis
+  [string] $MakeNsis,
+  [string] $StoreVersion,
+  [switch] $StoreOnly
 )
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -48,7 +55,7 @@ $Plain = ($Version -split '-')[0]
 Write-Output "JBD $Version"
 
 $Dist = Join-Path $Root "dist\jbd-$Version"
-Remove-Item -Recurse -Force $Dist -ErrorAction SilentlyContinue
+if (-not $StoreOnly) { Remove-Item -Recurse -Force $Dist -ErrorAction SilentlyContinue }
 New-Item -ItemType Directory -Force -Path $Dist | Out-Null
 
 if (-not $SkipBuild) {
@@ -80,6 +87,7 @@ Invoke-Native 'third-party notices' { node (Join-Path $PSScriptRoot 'notices.cjs
 Copy-Item $Exe $Dist
 
 # ---- the jabrod.com installer (NSIS) -------------------------------------------------------------
+if (-not $StoreOnly) {
 if (-not $MakeNsis) {
   $found = Get-Command makensis -ErrorAction SilentlyContinue
   if ($found) { $MakeNsis = $found.Source } else { $MakeNsis = Join-Path $env:LOCALAPPDATA 'tauri\NSIS\makensis.exe' }
@@ -90,9 +98,16 @@ $SizeKb = [int][math]::Ceiling(((Get-ChildItem $Stage | Measure-Object Length -S
 Invoke-Native 'makensis' {
   & $MakeNsis /V2 "/DVER=$Plain" "/DSTAGE=$Stage" "/DICON=$(Join-Path $Root 'assets\jbd\jbd.ico')" "/DOUT=$Setup" "/DSIZE_KB=$SizeKb" (Join-Path $PSScriptRoot 'jbd.nsi')
 }
+}
 
 # ---- the Microsoft Store package (MSIX) -----------------------------------------------------------
 $MsixVersion = "$Plain.0"
+if ($StoreVersion) {
+  if ($StoreVersion -notmatch '^\d+\.\d+\.\d+\.0$') { throw "-StoreVersion must look like 1.0.1.0 (fourth field 0), got '$StoreVersion'" }
+  $MsixVersion = $StoreVersion
+}
+# one Store package per dist folder: drop earlier MSIX builds
+Get-ChildItem $Dist -Filter 'JBD_*_x64.msix' -ErrorAction SilentlyContinue | Remove-Item -Force
 $Msix = Join-Path $Dist "JBD_${MsixVersion}_x64.msix"
 $MsixStage = Join-Path $Root 'target\jbd-package\msix'
 Remove-Item -Recurse -Force $MsixStage -ErrorAction SilentlyContinue
