@@ -69,7 +69,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         let resp = ui.interact(r, egui::Id::new(("welcome-template", *id)), Sense::click()).on_hover_text(format!("New project, {tw}×{th}"));
         app.auto.add(&format!("welcome.template.{id}"), r, name);
         let hot = resp.hovered();
-        p.rect_filled(r, 10.0, if hot { Color32::from_rgb(0x15, 0x15, 0x18) } else { t.panel_bg });
+        p.rect_filled(r, 10.0, if hot { t.hover } else { t.panel_bg });
         p.rect_stroke(r, 10.0, Stroke::new(1.0, if hot { t.field_border } else { t.separator }), egui::StrokeKind::Inside);
         // the shape, drawn to its aspect ratio
         let max = vec2(56.0, 56.0);

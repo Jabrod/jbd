@@ -2314,6 +2314,8 @@ fn build() -> Vec<CommandSpec> {
         query!("history.list", "List History", "{}", |s, _| Ok(
             json!({"undo": s.history.undo.iter().map(|h| &h.0).collect::<Vec<_>>(), "redo": s.history.redo.iter().map(|h| &h.0).collect::<Vec<_>>()})
         )),
+        query!("effects.keyframes", "Read Keyframes", r#"{"clip":id,"effect":"motion"|index?,"param":str,"mask":n?}"#, |s, p| read_keyframes(s, p)),
+        query!("clip.frameTransform", "Clip Frame Transform", r#"{"clip":id,"time":ticks?}"#, |s, p| frame_transform(s, p)),
     ];
     crate::sequence_tools::splice(&mut v);
     v.extend(crate::captions::commands());
@@ -2466,6 +2468,83 @@ fn mark(s: &mut Session, p: &Value, is_in: bool) -> Result<Value> {
         Ok(())
     })?;
     Ok(Value::Null)
+}
+
+/// A parameter value as plain JSON, the same shapes `effects.setParam` takes: a number, `[x, y]`,
+/// `[r, g, b, a]`, a bool, a string. Shapes with no short form (paths, curves) come back as their
+/// point count, which is all a caller checking its own edit needs.
+pub(crate) fn param_to_json(v: &ParamValue) -> Value {
+    match v {
+        ParamValue::Float(f) => json!(f),
+        ParamValue::Vec2(p) => json!([p.x, p.y]),
+        ParamValue::Color(c) => json!(c),
+        ParamValue::Bool(b) => json!(b),
+        ParamValue::Choice(c) => json!(c),
+        ParamValue::Text(t) => json!(t),
+        ParamValue::Curve(c) => json!({"curvePoints": c.len()}),
+        ParamValue::Path(p) => json!({"pathVertices": p.vertices.len()}),
+    }
+}
+
+/// Read one parameter's keyframes: their times (in media ticks, and in seconds from the clip's
+/// own start, which is how the Director sets them) and values, so an agent can check that the
+/// animation it asked for is really there. Read-only.
+fn read_keyframes(s: &Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "effects.keyframes";
+    let c = clip_p(p, "clip").ok_or_else(|| bad(CMD, "need `clip`"))?;
+    let pid = str_p(p, "param").ok_or_else(|| bad(CMD, "need `param`"))?;
+    let eff = p.get("effect").cloned().unwrap_or(json!("motion"));
+    let q = s.active_sequence().ok_or(EngineError::NoSequence)?;
+    let (_, it) = q.find_item(c).ok_or(filmcraft_edit::EditError::NoItem(c))?;
+    let e = match &eff {
+        Value::Number(n) => it.effects.get(n.as_u64().unwrap_or(0) as usize),
+        Value::String(sid) => it.effects.iter().find(|e| &e.effect == sid),
+        _ => None,
+    }
+    .ok_or_else(|| bad(CMD, "no such effect on clip"))?;
+    let prm = match u64_p(p, "mask") {
+        Some(mi) => e.masks.get(mi as usize).and_then(|m| m.param(pid)),
+        None => e.params.get(pid),
+    }
+    .ok_or_else(|| bad(CMD, format!("no param `{pid}`")))?;
+    // media time of the clip's first frame: keyframe times are measured from it
+    let at_start = it.source_time_at(it.start);
+    Ok(json!({
+        "clip": c.0,
+        "param": pid,
+        "animated": prm.is_animated(),
+        "value": param_to_json(&prm.value),
+        "keyframes": prm.keyframes.iter().map(|k| json!({
+            "time": k.time.0,
+            "clipSeconds": (k.time - at_start).seconds(),
+            "value": param_to_json(&k.value),
+        })).collect::<Vec<_>>(),
+    }))
+}
+
+/// Where a clip's own pixels land in the finished frame at timeline time `time` (default: the
+/// playhead, kept inside the clip): its source size, the sequence size, the media time there,
+/// and the Motion matrix `[a, b, c, d, e, f]` (x' = a·x + c·y + e, y' = b·x + d·y + f) from source
+/// pixels to sequence pixels. Masks and trackers work in source pixels; this maps between them
+/// and the picture. Read-only.
+fn frame_transform(s: &Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "clip.frameTransform";
+    let c = clip_p(p, "clip").ok_or_else(|| bad(CMD, "need `clip`"))?;
+    let q = s.active_sequence().ok_or(EngineError::NoSequence)?;
+    let (_, it) = q.find_item(c).ok_or(filmcraft_edit::EditError::NoItem(c))?;
+    let src = filmcraft_render::source_size(&s.project, it.item).ok_or_else(|| bad(CMD, "the clip has no picture"))?;
+    // inside the clip (min/max, not clamp: a zero-length clip must not panic)
+    let t = time_p(s, p, "").unwrap_or(s.playhead()).min(it.end() - Tick(1)).max(it.start);
+    let mt = it.effect_time_at(t);
+    let m = filmcraft_render::motion_matrix(q, it, src, mt);
+    Ok(json!({
+        "clip": c.0,
+        "source": [src.0, src.1],
+        "frame": [q.settings.width, q.settings.height],
+        "time": t.0,
+        "mediaTime": it.source_time_at(t).0,
+        "matrix": [m.a, m.b, m.c, m.d, m.e, m.f],
+    }))
 }
 
 pub(crate) fn json_to_param(template: &ParamValue, v: &Value) -> Option<ParamValue> {

@@ -91,6 +91,9 @@ pub struct HostHooks {
     /// Open a file in its default application, or (`true`) reveal it in the file manager (Edit ▸
     /// Edit Original, Help ▸ Reveal Log Files).
     pub open_path: Option<Box<dyn FnMut(&str, bool) -> Result<(), String>>>,
+    /// JBD ▸ Settings ▸ Connections: start the local control server on this port while running
+    /// (the desktop app's `control_server::try_start`). None in tests and the web build.
+    pub start_control: Option<Box<dyn FnMut(u16) -> Result<Receiver<ControlRequest>, String>>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -399,6 +402,16 @@ impl FilmcraftApp {
     pub fn with_control(mut self, rx: Receiver<ControlRequest>) -> Self {
         self.control_rx = Some(rx);
         self
+    }
+
+    /// The control channel is on (started with `--control`, or from Settings ▸ Connections).
+    pub fn has_control(&self) -> bool {
+        self.control_rx.is_some()
+    }
+
+    /// Turn the control channel on while running (Settings ▸ Connections).
+    pub fn set_control(&mut self, rx: Receiver<ControlRequest>) {
+        self.control_rx = Some(rx);
     }
 
     pub fn services(&self) -> Arc<dyn Services> {
@@ -1256,9 +1269,11 @@ impl FilmcraftApp {
                 dock::DockAction::PanelMenu(p, pos) => {
                     ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new("panel-menu"), (p, pos)));
                 }
+                dock::DockAction::AddMenu(near, pos) => jbd::open_add_panel_menu(ui.ctx(), near, pos),
             }
         }
         panels::panel_menu_popup(self, ui);
+        jbd::add_panel_menu(self, ui.ctx());
     }
 }
 
@@ -1308,7 +1323,20 @@ impl eframe::App for FilmcraftApp {
                     .position(|e| pointer(e) || matches!(e, egui::Event::Key { pressed: false, .. }))
                     .map_or(self.synthetic.len(), |i| if pointer(&self.synthetic[i]) { i.max(1) } else { i + 1 })
             };
+            // a synthetic click held modifiers (Alt+click): hold them for its frame too, as a
+            // real keyboard would (widgets read the frame's modifiers, not the event's)
+            let held = match self.synthetic.first() {
+                Some(egui::Event::PointerButton { modifiers, pressed, .. }) if !modifiers.is_none() => Some((*modifiers, *pressed)),
+                _ => None,
+            };
+            if let Some((m, true)) = held {
+                raw_input.events.push(egui::Event::ModifiersChanged(m));
+            }
             raw_input.events.extend(self.synthetic.drain(..n));
+            // let go of them a frame after the release (egui reports the click on the release frame)
+            if let Some((_, false)) = held {
+                self.synthetic.insert(0, egui::Event::ModifiersChanged(egui::Modifiers::NONE));
+            }
         }
     }
 
@@ -1338,6 +1366,8 @@ impl eframe::App for FilmcraftApp {
         self.timeline_still = if self.ui.timeline.animating() { 0 } else { self.timeline_still.saturating_add(1) };
         let had_synthetic = !self.synthetic.is_empty();
         self.drain_control(ctx);
+        // JBD: the AI Director's editor requests (jbd/director_run.rs)
+        jbd::director_run::drain(self, ctx);
         if !self.synthetic.is_empty() && !had_synthetic {
             // Occluded macOS windows stop running `ui`; bring the window forward (without taking
             // keyboard focus) so the input is processed.

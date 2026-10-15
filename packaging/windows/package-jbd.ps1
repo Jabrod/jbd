@@ -61,9 +61,12 @@ New-Item -ItemType Directory -Force -Path $Dist | Out-Null
 if (-not $SkipBuild) {
   # fail (rather than warn) if the icon / version info can't be embedded in jbd.exe
   $env:FILMCRAFT_REQUIRE_WINRES = '1'
-  Invoke-Native 'cargo build (release)' { cargo build --release --locked -p filmcraft }
+  Invoke-Native 'cargo build (release)' { cargo build --release --locked -p filmcraft -p filmcraft-cli }
 }
 $Exe = Join-Path $Root 'target\release\jbd.exe'
+# JBD's MCP program: lets Claude Code / Claude Desktop drive JBD (Settings > Connections)
+$Mcp = Join-Path $Root 'target\release\filmcraft-cli.exe'
+if (-not (Test-Path $Mcp)) { throw "filmcraft-cli.exe not found: $Mcp" }
 if (-not (Test-Path $Exe)) { throw "jbd.exe not found: $Exe" }
 
 # jbd.exe must be a 64-bit Windows GUI program (no console window)
@@ -82,6 +85,7 @@ $Stage = Join-Path $Root 'target\jbd-package\stage'
 Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Stage | Out-Null
 Copy-Item $Exe $Stage
+Copy-Item $Mcp (Join-Path $Stage 'jbd-mcp.exe')
 Copy-Item (Join-Path $PSScriptRoot 'EULA.txt') $Stage
 Invoke-Native 'third-party notices' { node (Join-Path $PSScriptRoot 'notices.cjs') (Join-Path $Stage 'THIRD-PARTY-NOTICES.txt') }
 Copy-Item $Exe $Dist

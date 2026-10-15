@@ -114,7 +114,7 @@ pub fn menu_row(ui: &mut egui::Ui, label: &str, t: &Tokens, color: Option<Color3
 
 /// The avatar: a circle with the person's initials.
 pub fn avatar(painter: &egui::Painter, center: Pos2, radius: f32, initials: &str, t: &Tokens) {
-    painter.circle(center, radius, Color32::from_rgb(0x23, 0x23, 0x27), Stroke::new(1.0, t.field_border));
+    painter.circle(center, radius, t.hover, Stroke::new(1.0, t.field_border));
     painter.text(center, egui::Align2::CENTER_CENTER, initials, Tokens::semibold(radius * 0.8), t.text);
 }
 
@@ -136,7 +136,7 @@ pub fn thousands(n: u32) -> String {
     let s = n.to_string();
     let mut out = String::new();
     for (i, c) in s.chars().enumerate() {
-        if i > 0 && (s.len() - i) % 3 == 0 {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);
@@ -148,6 +148,17 @@ pub fn thousands(n: u32) -> String {
 pub fn ease_out(x: f32) -> f32 {
     let x = x.clamp(0.0, 1.0);
     if x >= 1.0 { 1.0 } else { 1.0 - 2f32.powf(-10.0 * x) }
+}
+
+/// A paragraph wrapped at `width` with every line centred on `top_center`. Returns its height.
+pub fn centered_paragraph(painter: &egui::Painter, top_center: Pos2, text: &str, font: egui::FontId, color: Color32, width: f32) -> f32 {
+    let mut job = egui::text::LayoutJob::simple(text.to_string(), font, color, width);
+    job.halign = egui::Align::Center;
+    let galley = painter.layout_job(job);
+    let h = galley.size().y;
+    // with centred alignment the galley is laid out around x = 0
+    painter.galley(top_center, galley, color);
+    h
 }
 
 #[cfg(test)]
@@ -166,15 +177,4 @@ mod tests {
         assert_eq!(super::ease_out(1.0), 1.0);
         assert!(super::ease_out(0.5) > 0.9);
     }
-}
-
-/// A paragraph wrapped at `width` with every line centred on `top_center`. Returns its height.
-pub fn centered_paragraph(painter: &egui::Painter, top_center: Pos2, text: &str, font: egui::FontId, color: Color32, width: f32) -> f32 {
-    let mut job = egui::text::LayoutJob::simple(text.to_string(), font, color, width);
-    job.halign = egui::Align::Center;
-    let galley = painter.layout_job(job);
-    let h = galley.size().y;
-    // with centred alignment the galley is laid out around x = 0
-    painter.galley(top_center, galley, color);
-    h
 }

@@ -124,6 +124,11 @@ pub struct Layout {
     pub rows: Vec<Row>,
     pub pps: f64,
     pub scroll: f64,
+    /// JBD: where the video tracks end and the audio tracks begin (y), and whether each part has
+    /// more tracks than fit (so the mouse wheel scrolls them).
+    pub split_y: f32,
+    pub video_overflow: bool,
+    pub audio_overflow: bool,
 }
 
 impl Layout {
@@ -261,7 +266,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         let top = audio_area.min.y + i as f32 * ah - app.ui.timeline.a_scroll;
         rows.push(Row { track: tr.id, kind: TrackKind::Audio, index: i, rect: Rect::from_min_max(pos2(content.min.x, top), pos2(content.max.x, top + ah)) });
     }
-    let layout = Layout { content, ruler, rows: rows.clone(), pps, scroll };
+    let layout = Layout { content, ruler, rows: rows.clone(), pps, scroll, split_y, video_overflow: max_vs > 0.0, audio_overflow: max_as > 0.0 };
     app.tl.layout = Some(layout.clone());
 
     // ---- backgrounds
@@ -790,6 +795,33 @@ fn draw_headers(app: &mut FilmcraftApp, ui: &mut egui::Ui, seq: &Sequence, rows:
         if visible.height() <= 0.0 {
             continue;
         }
+        // JBD: right-click a track header to add or delete tracks (registered before the
+        // header's buttons, so they still get their own clicks)
+        let menu = ui.interact(visible, egui::Id::new(("track-header-menu", r.track.0)), egui::Sense::click());
+        let empty = tr.items.is_empty();
+        let kind = if r.kind == TrackKind::Video { "video" } else { "audio" };
+        menu.context_menu(|ui| {
+            ui.set_min_width(190.0);
+            let name = format!("{}{}", if r.kind == TrackKind::Video { "V" } else { "A" }, r.index + 1);
+            let del = ui.button(if empty { format!("Delete Track {name}") } else { format!("Delete Track {name} and Its Clips") });
+            app.auto.add(&format!("timeline.track.{name}.delete"), del.rect, "Delete Track");
+            if del.clicked() {
+                actions.push(("sequence.deleteTrack".into(), json!({"track": r.track.0})));
+                ui.close();
+            }
+            let del_empty = ui.button(format!("Delete All Empty {} Tracks", if r.kind == TrackKind::Video { "Video" } else { "Audio" }));
+            app.auto.add(&format!("timeline.track.{name}.deleteEmpty"), del_empty.rect, "Delete All Empty Tracks");
+            if del_empty.clicked() {
+                actions.push(("sequence.deleteTracks".into(), json!({kind: "empty"})));
+                ui.close();
+            }
+            ui.separator();
+            if ui.button(format!("Add {} Track", if r.kind == TrackKind::Video { "Video" } else { "Audio" })).clicked() {
+                let n = if r.kind == TrackKind::Video { json!({"video": 1, "audio": 0}) } else { json!({"video": 0, "audio": 1}) };
+                actions.push(("sequence.addTracks".into(), n));
+                ui.close();
+            }
+        });
         let p = ui.painter().with_clip_rect(visible);
         p.rect_filled(hrect, 0.0, t.tl_header_bg);
         p.line_segment([pos2(hrect.min.x, hrect.max.y - 0.5), pos2(hrect.max.x, hrect.max.y - 0.5)], Stroke::new(1.0, t.separator));
@@ -958,7 +990,7 @@ fn draw_top(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect, seq: &Sequenc
         let resp = ui.interact(r, egui::Id::new(("tl-toggle", key)), Sense::click()).on_hover_text(tip);
         app.auto.add(&format!("timeline.toggle.{key}"), r, tip);
         if toggle && on {
-            p.rect_filled(r, 4.0, Color32::from_rgb(0x4b, 0x4b, 0x4b));
+            p.rect_filled(r, 4.0, t.pressed);
         } else if resp.hovered() {
             p.rect_filled(r, 4.0, t.hover);
         }
@@ -1119,7 +1151,7 @@ fn zoom_scrollbar(app: &mut FilmcraftApp, ui: &mut egui::Ui, bar: Rect, dur_s: f
     let b = bar.min.x + ((v.scroll + vis) / total).min(1.0) as f32 * bar.width();
     let thumb = Rect::from_min_max(pos2(a, bar.min.y), pos2(b.max(a + 20.0), bar.max.y));
     let hover = ui.rect_contains_pointer(thumb);
-    p.rect_filled(thumb, thumb.height() / 2.0, if hover { Color32::from_rgb(0x6a, 0x6a, 0x6a) } else { Color32::from_rgb(0x4b, 0x4b, 0x4b) });
+    p.rect_filled(thumb, thumb.height() / 2.0, if hover { t.text_faint } else { t.field_border });
     for x in [thumb.min.x + thumb.height() / 2.0, thumb.max.x - thumb.height() / 2.0] {
         p.circle_filled(pos2(x, thumb.center().y), 4.5, t.panel_bg);
         p.circle_stroke(pos2(x, thumb.center().y), 4.5, Stroke::new(1.5, Color32::from_rgb(0xd1, 0xd1, 0xd1)));
@@ -1395,7 +1427,9 @@ fn interact(app: &mut FilmcraftApp, ui: &mut egui::Ui, seq: &Sequence, layout: &
     let tool = app.ui.tool;
     let rate = seq.settings.frame_rate;
 
-    // ---- wheel: horizontal scroll; Alt/Cmd+wheel zoom about cursor; Shift+wheel vertical
+    // ---- wheel (JBD, as most editors): the wheel scrolls the tracks under the pointer up and
+    // down (sideways when they all fit); Shift+wheel or a sideways swipe scrolls through time;
+    // Ctrl/Alt+wheel zooms about the pointer
     if ui.rect_contains_pointer(rect) {
         let (scroll, zoom) = ctx.input(|i| (i.smooth_scroll_delta, i.zoom_delta()));
         if let Some(p) = ctx.pointer_hover_pos() {
@@ -1405,13 +1439,16 @@ fn interact(app: &mut FilmcraftApp, ui: &mut egui::Ui, seq: &Sequence, layout: &
                 let v = &mut app.ui.timeline;
                 v.target_pps = (v.target_pps * f).clamp(0.05, 24_000.0);
                 app.tl.zoom_anchor = Some((anchor_t, p.x));
-            } else if mods.shift && scroll.y.abs() > 0.0 {
-                if layout.rows.iter().find(|r| r.kind == TrackKind::Video).is_some_and(|r| p.y < r.rect.max.y + 200.0) && p.y < layout.content.center().y {
-                    app.ui.timeline.v_scroll -= scroll.y;
+            } else if !mods.shift && scroll.y.abs() > scroll.x.abs() && (if p.y < layout.split_y { layout.video_overflow } else { layout.audio_overflow }) {
+                // V1 sits at the bottom and tracks stack upward: wheel up shows the higher video
+                // tracks; audio runs downward: wheel down shows the lower audio tracks
+                if p.y < layout.split_y {
+                    app.ui.timeline.v_scroll += scroll.y;
                 } else {
                     app.ui.timeline.a_scroll -= scroll.y;
                 }
             } else if scroll.x.abs() > 0.0 || scroll.y.abs() > 0.0 {
+                // Shift turns the wheel sideways (some mice already send it as x)
                 let d = if scroll.x.abs() > scroll.y.abs() { scroll.x } else { scroll.y };
                 let v = &mut app.ui.timeline;
                 v.target_scroll = (v.target_scroll - d as f64 / v.pps).max(0.0);
@@ -1454,6 +1491,13 @@ fn interact(app: &mut FilmcraftApp, ui: &mut egui::Ui, seq: &Sequence, layout: &
         let h = hit(seq, layout, p);
         let t = layout.tick_at(p.x);
         let started = match (tool, h.clone()) {
+            // JBD: Ctrl+Alt+click gives the clip to the Director as context (again takes it back)
+            (_, Hit::Clip { clip, .. }) if mods.command && mods.alt => {
+                if resp.clicked() {
+                    crate::jbd::director_run::toggle_context_clip(app, clip);
+                }
+                None
+            }
             (_, Hit::Ruler) => Some(Drag::Scrub),
             (Tool::Hand, _) => Some(Drag::Pan { last: p }),
             (Tool::Zoom, _) => {
@@ -1541,12 +1585,12 @@ fn interact(app: &mut FilmcraftApp, ui: &mut egui::Ui, seq: &Sequence, layout: &
                 let sel = &app.session.state.selection;
                 if mods.shift {
                     let _ = app.session.execute("timeline.select", json!({"clips": [clip.0], "toggle": true}));
+                } else if mods.alt {
+                    // JBD: Alt+click selects just this side of a link, even when the clip was
+                    // already selected together with its partner (a video and its own sound)
+                    app.session.state.selection = vec![clip];
                 } else if !sel.contains(&clip) {
-                    if mods.alt {
-                        app.session.state.selection = vec![clip];
-                    } else {
-                        let _ = app.session.execute("timeline.select", json!({"clips": [clip.0]}));
-                    }
+                    let _ = app.session.execute("timeline.select", json!({"clips": [clip.0]}));
                 }
                 if resp.drag_started() {
                     let clips = app.session.state.selection.clone();
@@ -1716,10 +1760,26 @@ fn interact(app: &mut FilmcraftApp, ui: &mut egui::Ui, seq: &Sequence, layout: &
         }
     }
 
-    // ---- context menu on clips
+    // ---- context menu on clips (a right-click on a clip that isn't selected selects it first,
+    // so the menu acts on the clip under the pointer)
+    if resp.secondary_clicked()
+        && let Some(p) = resp.interact_pointer_pos()
+        && let Hit::Clip { clip, .. } = hit(seq, layout, p)
+        && !app.session.state.selection.contains(&clip)
+    {
+        let _ = app.session.execute("timeline.select", json!({"clips": [clip.0]}));
+    }
     resp.context_menu(|ui| {
         ui.set_min_width(200.0);
         let sel_n = app.session.state.selection.len();
+        // JBD: give the selected clips to the Director as context
+        let add = ui.add_enabled(sel_n > 0, egui::Button::new("Add to Director"));
+        app.auto.add("timeline.menu.addToDirector", add.rect, "Add to Director");
+        if add.on_hover_text("Ctrl+Alt+click a clip does the same").clicked() {
+            crate::jbd::director_run::add_selection_to_director(app);
+            ui.close();
+        }
+        ui.separator();
         let items: [(&str, &str); 11] = [
             ("Cut", "edit.cut"),
             ("Copy", "edit.copy"),

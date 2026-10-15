@@ -92,6 +92,8 @@ Section "JBD" Main
   RMDir /r "$INSTDIR\third-party"
 
   File "${STAGE}\${EXE}"
+  ; JBD's MCP program (Settings > Connections: Claude Code / Claude Desktop)
+  File "${STAGE}\jbd-mcp.exe"
   File "${STAGE}\THIRD-PARTY-NOTICES.txt"
   File "${STAGE}\EULA.txt"
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -117,6 +119,7 @@ SectionEnd
 Section "Uninstall"
   Delete "$INSTDIR\${EXE}"
   Delete "$INSTDIR\THIRD-PARTY-NOTICES.txt"
+  Delete "$INSTDIR\jbd-mcp.exe"
   Delete "$INSTDIR\EULA.txt"
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"

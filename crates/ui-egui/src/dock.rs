@@ -182,11 +182,14 @@ pub struct JbdAreas {
     pub media: bool,
     pub side: bool,
     pub timeline: bool,
+    /// Director view: the side area takes half the window, on the Director tab.
+    #[serde(default)]
+    pub focus: bool,
 }
 
 impl Default for JbdAreas {
     fn default() -> Self {
-        JbdAreas { media: true, side: true, timeline: true }
+        JbdAreas { media: true, side: true, timeline: true, focus: false }
     }
 }
 
@@ -197,7 +200,14 @@ pub fn jbd_workspace(areas: JbdAreas) -> DockNode {
     use PanelKind::*;
     use SplitSize::*;
     let preview = tabs(&[Program], 0);
-    let with_side = if areas.side { hsplit(FixedB(420.0), preview, tabs(&[Properties, Text, Director, EffectControls, Effects], 0)) } else { preview };
+    let with_side = if areas.focus {
+        // Director view: the Director gets half the window beside the Preview
+        hsplit(Ratio(0.5), preview, tabs(&[Properties, Text, Director, EffectControls, Effects], 2))
+    } else if areas.side {
+        hsplit(FixedB(420.0), preview, tabs(&[Properties, Text, Director, EffectControls, Effects], 0))
+    } else {
+        preview
+    };
     let top = if areas.media { hsplit(FixedA(420.0), tabs(&[Project], 0), with_side) } else { with_side };
     if areas.timeline {
         vsplit(Ratio(0.60), top, hsplit(FixedA(52.0), tabs(&[Tools], 0), hsplit(FixedB(96.0), tabs(&[Timeline], 0), tabs(&[AudioMeters], 0))))
@@ -379,6 +389,8 @@ pub enum DockAction {
     Focus(PanelKind),
     Close(PanelKind),
     PanelMenu(PanelKind, egui::Pos2),
+    /// JBD: the + at the end of a tab strip (menu of closed panels to add next to this one).
+    AddMenu(PanelKind, egui::Pos2),
 }
 
 /// Size of a split's first child in `avail` points: the requested size, keeping both children at
@@ -469,8 +481,10 @@ pub fn draw_group_chrome(ui: &mut egui::Ui, g: &Group, focused: PanelKind, t: &T
             let name = if jbd { p.jbd_title() } else { p.title() };
             let galley = painter.layout_no_wrap(name.to_string(), Tokens::medium(12.0), if is_active { t.tab_text_active } else { t.tab_text });
             let menu_w = if is_active { 20.0 } else { 0.0 };
-            let w = galley.size().x + 16.0 + menu_w;
-            if x + w > strip.max.x - 20.0 && i > g.active {
+            // JBD: room for the tab's × (shown on the active tab and on hover)
+            let close_w = if jbd { 16.0 } else { 0.0 };
+            let w = galley.size().x + 16.0 + menu_w + close_w;
+            if x + w > strip.max.x - (if jbd { 44.0 } else { 20.0 }) && i > g.active {
                 let r = Rect::from_min_size(pos2(strip.max.x - 22.0, strip.min.y + 6.0), vec2(18.0, 20.0));
                 let resp = ui.interact(r, egui::Id::new(("tab-overflow", g.path.clone())), Sense::click());
                 icons::paint(&painter, r.shrink(4.0).translate(vec2(-2.0, 0.0)), Icon::ChevronRight, t.tab_text);
@@ -482,7 +496,10 @@ pub fn draw_group_chrome(ui: &mut egui::Ui, g: &Group, focused: PanelKind, t: &T
                 break;
             }
             let tab = Rect::from_min_size(pos2(x, strip.min.y), vec2(w, t.tab_h));
-            let resp = ui.interact(tab, egui::Id::new(("tab", g.path.clone(), i)), Sense::click());
+            // the tab's own click area stops where its × begins (JBD), so the two never overlap
+            let hit = if jbd { tab.with_max_x(tab.max.x - close_w) } else { tab };
+            let resp = ui.interact(hit, egui::Id::new(("tab", g.path.clone(), i)), Sense::click());
+            let hovered = resp.hovered() || (jbd && ui.rect_contains_pointer(tab));
             reg.add(&format!("panel.tab.{}", p.id()), tab, name);
             let label_x = tab.min.x + 8.0;
             let label_w = galley.size().x;
@@ -511,7 +528,38 @@ pub fn draw_group_chrome(ui: &mut egui::Ui, g: &Group, focused: PanelKind, t: &T
             if resp.middle_clicked() {
                 actions.push(DockAction::Close(*p));
             }
+            // JBD: × closes the tab (the + at the end brings it back)
+            if jbd && (is_active || hovered) {
+                let c = pos2(tab.max.x - 10.0, text_y);
+                let xr = Rect::from_center_size(c, vec2(14.0, 14.0));
+                let xresp = ui.interact(xr, egui::Id::new(("tab-close", g.path.clone(), i)), Sense::click());
+                reg.add(&format!("panel.close.{}", p.id()), xr, "Close tab");
+                if xresp.hovered() {
+                    painter.rect_filled(xr, 3.0, t.hover);
+                }
+                let xc = if xresp.hovered() { t.tab_text_active } else { t.tab_text };
+                let s = Stroke::new(1.3, xc);
+                painter.line_segment([c + vec2(-3.5, -3.5), c + vec2(3.5, 3.5)], s);
+                painter.line_segment([c + vec2(3.5, -3.5), c + vec2(-3.5, 3.5)], s);
+                if xresp.clicked() {
+                    actions.push(DockAction::Close(*p));
+                }
+            }
             x += w + 8.0;
+        }
+        // JBD: + adds a closed panel back to this group
+        if jbd && let Some(&first) = g.panels.first() {
+            let c = pos2((x + 6.0).min(strip.max.x - 12.0), text_y);
+            let pr = Rect::from_center_size(c, vec2(18.0, 18.0));
+            let presp = ui.interact(pr, egui::Id::new(("tab-add", g.path.clone())), Sense::click());
+            reg.add(&format!("panel.add.{}", first.id()), pr, "Add a panel");
+            if presp.hovered() {
+                painter.rect_filled(pr, 3.0, t.hover);
+            }
+            icons::paint(&painter, pr.shrink(3.0), Icon::Plus, if presp.hovered() { t.tab_text_active } else { t.tab_text });
+            if presp.on_hover_text("Add a panel").clicked() {
+                actions.push(DockAction::AddMenu(first, pr.left_bottom()));
+            }
         }
     }
     // focus outline

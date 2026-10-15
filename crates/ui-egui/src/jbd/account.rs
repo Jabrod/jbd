@@ -130,7 +130,7 @@ fn menu(app: &mut FilmcraftApp, ctx: &egui::Context, chip: Rect) {
                         close = true;
                     }
                     ui.label(
-                        egui::RichText::new("1080p and 4K exports without the mark, every preset, 2,000 AI requests a month.")
+                        egui::RichText::new("1080p and 4K exports without the mark, every preset, and monthly AI credits for the Director.")
                             .font(Tokens::ui(11.0))
                             .color(t.text_faint),
                     );

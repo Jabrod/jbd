@@ -76,6 +76,8 @@ const LAYERS: &[(&str, u8)] = &[
     ("web", 6),
     // JBD crates (Jabrod): account and plan (network, credential store; desktop only)
     ("jbd-account", 5),
+    // the AI Director: agent loop, tools, model and video calls to jabrod.com
+    ("jbd-director", 5),
 ];
 
 /// L0 crates that are not codecs/containers (no `bitstream`-only restriction).

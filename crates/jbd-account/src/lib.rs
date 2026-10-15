@@ -2,15 +2,15 @@
 //!
 //! JBD needs a Jabrod account (free). The plan decides what exports can do:
 //!
-//! | Plan | Exports | AI requests a month |
+//! | Plan | Exports | AI credits a month (1 credit = $0.01 of AI cost) |
 //! |---|---|---|
 //! | Free | up to 720p, with the "Made with JBD" mark | 30 |
 //! | Pro trial (7 days, first sign-in) | everything | 100 |
-//! | Pro (₹4,999 a year, bought on jabrod.com) | everything | 2,000 |
+//! | Pro (₹4,999 a year, bought on jabrod.com) | everything | 250 |
 //!
 //! jabrod.com is the source of truth for all of it (repo `jbd_home`: `lib/platform/tokens.ts`,
 //! `lib/platform/billing.ts`, `lib/platform/ai.ts`). The numbers here are only for display and
-//! must match `MONTHLY_CALLS` in `lib/platform/ai.ts`.
+//! must match `MONTHLY_CREDITS` in `lib/platform/credits.ts`.
 //!
 //! - [`AccountBackend`]: what the UI talks to. The real one is [`native::JabrodAccount`] (desktop
 //!   only); [`DemoAccount`] is a signed-in Pro account with no network, for screenshots and UI
@@ -117,11 +117,11 @@ impl Usage {
     }
 }
 
-/// The monthly AI allowance of a plan. MUST match `MONTHLY_CALLS` in jbd_home `lib/platform/ai.ts`.
+/// The monthly AI allowance of a plan. MUST match `MONTHLY_CREDITS` in jbd_home `lib/platform/credits.ts` (the server sends the real numbers; this is the fallback).
 pub fn monthly_ai_limit(tier: Tier, trial: bool) -> u32 {
     match (tier, trial) {
         (Tier::Pro, true) => 100,
-        (Tier::Pro, false) => 2000,
+        (Tier::Pro, false) => 250,
         (Tier::Free, _) => 30,
     }
 }
@@ -351,7 +351,7 @@ mod tests {
     fn limits_match_jabrod_com() {
         assert_eq!(monthly_ai_limit(Tier::Free, false), 30);
         assert_eq!(monthly_ai_limit(Tier::Pro, true), 100);
-        assert_eq!(monthly_ai_limit(Tier::Pro, false), 2000);
+        assert_eq!(monthly_ai_limit(Tier::Pro, false), 250, "Pro: MONTHLY_CREDITS.pro in jbd_home lib/platform/credits.ts");
         let u = Usage { calls: 45, limit: 30 };
         assert_eq!(u.left(), 0);
         assert_eq!(u.fraction(), 1.0);
@@ -370,5 +370,68 @@ mod tests {
         assert_eq!(Tier::from_server("pro"), Tier::Pro);
         assert_eq!(Tier::from_server("PRO"), Tier::Pro);
         assert_eq!(Tier::from_server("enterprise?"), Tier::Free);
+    }
+}
+
+// ------------------------------------------------------------------------------------ releases
+
+/// The latest JBD release, as jabrod.com/api/releases/jbd describes it (the in-app update check).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Release {
+    pub version: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub notes: Vec<String>,
+    /// The installer (for copies installed from jabrod.com).
+    #[serde(default)]
+    pub download_url: String,
+    /// The product page (fallback when there's no direct download).
+    #[serde(default)]
+    pub page_url: String,
+}
+
+/// Is `latest` a newer version than `current`? Compares `1.10.0` > `1.9.2` as numbers; anything
+/// after a `-` (a pre-release tag) is ignored, and an unreadable part counts as 0.
+pub fn is_newer(latest: &str, current: &str) -> bool {
+    let parts = |v: &str| -> Vec<u64> { v.trim().trim_start_matches('v').split('-').next().unwrap_or("").split('.').map(|p| p.parse().unwrap_or(0)).collect() };
+    let (a, b) = (parts(latest), parts(current));
+    for i in 0..a.len().max(b.len()) {
+        let (x, y) = (a.get(i).copied().unwrap_or(0), b.get(i).copied().unwrap_or(0));
+        if x != y {
+            return x > y;
+        }
+    }
+    false
+}
+
+/// What a problem report carries besides the message.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Report {
+    /// "bug", "idea", "question" or "billing" (jabrod.com's support topics).
+    pub topic: String,
+    pub subject: String,
+    pub message: String,
+    /// App version, Windows version, … (short values).
+    pub context: Vec<(String, String)>,
+    /// The end of JBD's log, when the person chose to include it.
+    pub log: Option<String>,
+}
+
+#[cfg(test)]
+mod release_tests {
+    use super::*;
+
+    #[test]
+    fn versions_compare_as_numbers() {
+        assert!(is_newer("1.1.0", "1.0.0"));
+        assert!(is_newer("1.10.0", "1.9.9"));
+        assert!(is_newer("2.0", "1.99.99"));
+        assert!(!is_newer("1.0.0", "1.0.0"));
+        assert!(!is_newer("1.0.0", "1.1.0"));
+        assert!(!is_newer("1.1.0-beta", "1.1.0"));
+        assert!(is_newer("v1.0.1", "1.0.0"));
+        assert!(!is_newer("garbage", "1.0.0"));
     }
 }

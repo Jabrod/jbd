@@ -9,14 +9,19 @@ use filmcraft_ui_egui::ControlRequest;
 use serde_json::{Value, json};
 
 pub fn start(port: u16, ctx: egui::Context) -> Receiver<ControlRequest> {
-    let (tx, rx) = channel::<ControlRequest>();
-    let listener = match TcpListener::bind(("127.0.0.1", port)) {
-        Ok(l) => l,
+    match try_start(port, ctx) {
+        Ok(rx) => rx,
         Err(e) => {
-            eprintln!("filmcraft: control server failed to bind 127.0.0.1:{port}: {e}");
-            return rx;
+            eprintln!("filmcraft: {e}");
+            channel::<ControlRequest>().1
         }
-    };
+    }
+}
+
+/// Like [`start`], but says when the port can't be used (JBD ▸ Settings ▸ Connections shows it).
+pub fn try_start(port: u16, ctx: egui::Context) -> Result<Receiver<ControlRequest>, String> {
+    let (tx, rx) = channel::<ControlRequest>();
+    let listener = TcpListener::bind(("127.0.0.1", port)).map_err(|e| format!("control server failed to bind 127.0.0.1:{port}: {e}"))?;
     eprintln!("filmcraft: control server listening on 127.0.0.1:{port}");
     std::thread::spawn(move || {
         for stream in listener.incoming().flatten() {
@@ -25,7 +30,7 @@ pub fn start(port: u16, ctx: egui::Context) -> Receiver<ControlRequest> {
             std::thread::spawn(move || serve(stream, tx, ctx));
         }
     });
-    rx
+    Ok(rx)
 }
 
 fn serve(stream: TcpStream, tx: Sender<ControlRequest>, ctx: egui::Context) {

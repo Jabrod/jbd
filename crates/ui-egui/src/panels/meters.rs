@@ -61,7 +61,8 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
             (l.momentary(), l.short_term(), l.integrated(), l.true_peak_dbtp())
         });
         let lr = Rect::from_min_max(pos2(rect.min.x + 4.0, rect.max.y - lufs_h), pos2(rect.max.x - 4.0, rect.max.y - 4.0));
-        ui.painter().rect_filled(lr, 2.0, egui::Color32::from_rgb(0x14, 0x14, 0x14));
+        // the readout sits on the theme (its text is theme-coloured); the bars stay on a dark well
+        ui.painter().rect_filled(lr, 2.0, t.field_bg);
         let rows = [("M", lufs_text(m)), ("S", lufs_text(s)), ("I", lufs_text(i)), ("TP", lufs_text(tp))];
         for (k, (label, val)) in rows.iter().enumerate() {
             let y = lr.min.y + 8.0 + k as f32 * 14.0;
@@ -84,7 +85,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         }
         app.auto.add("audioMeters.loudness", lr, &format!("M {} S {} I {} LUFS TP {} dBTP", lufs_text(m), lufs_text(s), lufs_text(i), lufs_text(tp)));
     }
-    ui.painter().rect_filled(Rect::from_min_max(pos2(rect.min.x + 4.0, rect.min.y + 4.0), pos2(rect.max.x - 4.0, area.max.y + 4.0)), 0.0, egui::Color32::BLACK);
+    ui.painter().rect_filled(Rect::from_min_max(pos2(rect.min.x + 4.0, rect.min.y + 4.0), pos2(rect.max.x - 4.0, area.max.y + 4.0)), 0.0, t.monitor_bg);
     let w = ((area.width() - 4.0 * (nch as f32 - 1.0)) / nch as f32).max(3.0);
     for c in 0..nch {
         let r = Rect::from_min_size(pos2(area.min.x + c as f32 * (w + 4.0), area.min.y), vec2(w, area.height()));
@@ -95,7 +96,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     let mut db = 0;
     while db >= -57 {
         let y = area.min.y + area.height() * (-db as f32 / 60.0);
-        ui.painter().text(pos2(rect.max.x - 6.0, y), Align2::RIGHT_CENTER, format!("{db}"), Tokens::ui(8.5), t.text_dim);
+        ui.painter().text(pos2(rect.max.x - 6.0, y), Align2::RIGHT_CENTER, format!("{db}"), Tokens::ui(8.5), egui::Color32::from_rgb(0x9b, 0x9b, 0xa3)); // on the dark meter well in every theme
         db -= 3;
     }
     ui.painter().text(pos2(rect.max.x - 6.0, area.max.y + 10.0), Align2::RIGHT_CENTER, "dB", Tokens::ui(8.5), t.text_dim);

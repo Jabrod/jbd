@@ -114,6 +114,8 @@ pub enum Icon {
     Network,
     /// Media Browser: recent directories (a clock face).
     Clock,
+    /// Show / hide a side panel: a window with a column on its left.
+    Sidebar,
 }
 
 pub struct Pen16<'a> {
@@ -629,6 +631,10 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
         Clock => {
             pen.circle(8.0, 8.0, 6.0);
             pen.line(&[(8.0, 4.5), (8.0, 8.0), (10.5, 9.5)]);
+        }
+        Sidebar => {
+            pen.rect(1.5, 2.5, 14.5, 13.5);
+            pen.line(&[(6.0, 2.5), (6.0, 13.5)]);
         }
     }
 }

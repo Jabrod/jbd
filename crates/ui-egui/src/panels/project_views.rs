@@ -770,7 +770,8 @@ fn bin_card(app: &mut FilmcraftApp, ui: &mut egui::Ui, r: Rect, b: &Bin, v: &Vie
     if selected {
         ui.painter().rect_stroke(bg, 4.0, Stroke::new(1.5, t.accent), StrokeKind::Inside);
     }
-    ui.painter().rect_filled(th, 2.0, Color32::from_gray(26));
+    // a bin is a folder, not a picture: a soft tile in the theme's own colours
+    ui.painter().rect_filled(th, 4.0, t.field_bg);
     icons::paint(ui.painter(), Rect::from_center_size(th.center(), vec2(th.height() * 0.6, th.height() * 0.6)), Icon::Folder, BIN_COLOR);
     let mut n = Vec::new();
     b.all_items(&mut n);

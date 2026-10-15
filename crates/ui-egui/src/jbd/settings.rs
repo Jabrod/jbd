@@ -17,7 +17,7 @@ use crate::FilmcraftApp;
 use crate::theme::Tokens;
 
 /// JBD's sections: id, title, what it's for, and the schema pages whose wired settings it shows.
-const SECTIONS: [(&str, &str, &str, &[&str]); 9] = [
+const SECTIONS: [(&str, &str, &str, &[&str]); 11] = [
     ("general", "General", "What JBD does when it opens, and saving your work.", &["general", "autoSave"]),
     ("account", "Account", "Your Jabrod account, plan and AI credits.", &[]),
     ("appearance", "Appearance", "Theme and contrast.", &["appearance"]),
@@ -27,6 +27,8 @@ const SECTIONS: [(&str, &str, &str, &[&str]); 9] = [
     ("transcription", "Transcription", "Speech to text on this computer.", &["mediaAnalysis"]),
     ("media", "Media & cache", "Importing media and the disk cache.", &["media", "mediaCache"]),
     ("keyboard", "Keyboard", "Keyboard shortcuts.", &[]),
+    ("connections", "Connections", "Let Claude Code and other AI apps work in JBD.", &[]),
+    ("connectors", "Connectors", "Services the Director can use, like Google Drive or Figma.", &[]),
 ];
 
 /// Clearer names for a few engine labels.
@@ -88,7 +90,7 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
                 app.auto.add(&format!("settings.section.{id}"), r, title);
                 let active = app.jbd.settings_section == id;
                 if active || resp.hovered() {
-                    p.rect_filled(r, 7.0, if active { t.hover } else { Color32::from_rgb(0x17, 0x17, 0x1a) });
+                    p.rect_filled(r, 7.0, if active { t.hover } else { t.field_bg });
                 }
                 p.text(pos2(r.min.x + 12.0, r.center().y), egui::Align2::LEFT_CENTER, title, Tokens::medium(13.0), if active { t.text } else { t.text_dim });
                 if resp.clicked() {
@@ -126,6 +128,8 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
                 ui.set_width(inner.width() - 12.0);
                 match sid {
                     "account" => account(app, ui, ctx, &t),
+                    "connections" => super::connections::connections(app, ui, ctx, &t),
+                    "connectors" => super::connections::connectors(app, ui, &t),
                     "keyboard" => {
                         ui.label(
                             RichText::new("See and change every keyboard shortcut, or switch to Premiere Pro, Final Cut Pro or Avid keys.").color(t.text_dim),

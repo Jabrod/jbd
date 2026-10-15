@@ -105,7 +105,20 @@ const MENUS: [(&str, &[Entry]); 6] = [
         ],
     ),
     ("Settings", &[Jbd("jbd.settings", "Settings…", Some("Ctrl+,")), Cmd("app.keyboardShortcuts"), Sep, Sub("Preferences", &["Edit", "Preferences"])]),
-    ("Help", &[Cmd("help.appPage"), Cmd("help.support"), Cmd("help.revealLogFiles"), Sep, As("app.about", "About JBD")]),
+    (
+        "Help",
+        &[
+            Jbd("jbd.whatsNew", "What's New in JBD", None),
+            Jbd("jbd.checkUpdates", "Check for Updates…", None),
+            Jbd("jbd.report", "Report a Problem…", None),
+            Sep,
+            Cmd("help.appPage"),
+            Cmd("help.support"),
+            Cmd("help.revealLogFiles"),
+            Sep,
+            As("app.about", "About JBD"),
+        ],
+    ),
 ];
 
 pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
@@ -191,6 +204,10 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     if let Some(chip) = super::account::header_chip(app, ui, rx, cy) {
         rx = chip.min.x - 10.0;
     }
+    // a newer JBD is out: the Update chip, before Export
+    if let Some(chip) = super::updates::chip(app, ui, rx, cy) {
+        rx = chip.min.x - 10.0;
+    }
     // Export: the white button
     let g = p.layout_no_wrap("Export".to_string(), Tokens::semibold(12.5), style::PRIMARY_TEXT);
     let ex = Rect::from_min_size(pos2(rx - g.size().x - 38.0, cy - 14.0), vec2(g.size().x + 38.0, 28.0));
@@ -211,7 +228,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         let resp = ui.interact(r, egui::Id::new(("jbd-layout", id)), Sense::click()).on_hover_text(format!("Show or hide the {tip}"));
         app.auto.add(&format!("titlebar.layout.{id}"), r, tip);
         if resp.hovered() || on {
-            p.rect_filled(r, 6.0, if resp.hovered() { t.hover } else { Color32::from_rgb(0x18, 0x18, 0x1b) });
+            p.rect_filled(r, 6.0, if resp.hovered() { t.hover } else { t.field_bg });
         }
         layout_icon(&p, r.center(), id, on, if on || resp.hovered() { t.text } else { t.text_faint });
         if resp.clicked() {
@@ -281,6 +298,12 @@ pub fn run(app: &mut FilmcraftApp, ctx: &egui::Context, id: &str) {
         "jbd.toggle.timeline" => super::toggle_area(app, "timeline"),
         "jbd.layout.reset" => super::reset_layout(app),
         "jbd.settings" => super::settings::open(app, "general"),
+        "jbd.whatsNew" => app.jbd.updates.dialog = Some(super::updates::Dialog::WhatsNew),
+        "jbd.report" => app.jbd.updates.dialog = Some(super::updates::Dialog::Report),
+        "jbd.checkUpdates" => {
+            app.jbd.updates.dialog = Some(super::updates::Dialog::Update);
+            super::updates::check_now(app, ctx);
+        }
         _ => {
             if let Err(e) = menus::invoke(app, ctx, id, json!({})) {
                 app.ui.status = e;

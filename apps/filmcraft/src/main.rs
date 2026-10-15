@@ -147,6 +147,9 @@ fn main() -> eframe::Result {
             // Windows: no system frame; JBD draws its own title bar and window buttons (jbd/titlebar.rs)
             .with_decorations(!cfg!(windows))
             .with_inner_size([1600.0, 980.0])
+            // JBD: always open maximized (an editor wants the whole screen); 1600×980 is the size
+            // it restores to.
+            .with_maximized(true)
             .with_min_inner_size([900.0, 560.0])
             .with_drag_and_drop(true)
             .with_fullsize_content_view(true)
@@ -257,6 +260,9 @@ fn main() -> eframe::Result {
                 let rx = control_server::start(port, cc.egui_ctx.clone());
                 app = app.with_control(rx);
             }
+            // JBD ▸ Settings ▸ Connections can turn the control server on while JBD runs
+            let ctx = cc.egui_ctx.clone();
+            app.hooks.start_control = Some(Box::new(move |port| control_server::try_start(port, ctx.clone())));
             Ok(Box::new(app))
         }),
     );

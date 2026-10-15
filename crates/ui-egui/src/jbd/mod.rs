@@ -17,13 +17,17 @@
 //! [`style`] (drawing helpers shared by these screens).
 
 pub mod account;
+pub mod connections;
 pub mod cube;
 pub mod director;
+pub mod director_history;
+pub mod director_run;
 pub mod settings;
 pub mod sign_in;
 pub mod splash;
 pub mod style;
 pub mod titlebar;
+pub mod updates;
 pub mod welcome;
 pub mod window;
 
@@ -69,12 +73,21 @@ pub struct JbdState {
     pub welcome_pending: Option<welcome::Pending>,
     /// Window focus last frame (regaining it re-checks the plan, so a purchase shows at once).
     was_focused: Option<bool>,
+    /// Settings ▸ Connections and Connectors (`connections.rs`).
+    pub connections: connections::State,
+    /// The AI Director: its conversation, its thread, its pickers (`director_run.rs`).
+    pub director: director_run::Director,
+    /// Update check, What's New and Report a Problem (`updates.rs`).
+    pub updates: updates::Updates,
     repaint_hooked: bool,
 }
 
 impl JbdState {
     pub fn new(backend: Arc<dyn AccountBackend>, splash: bool) -> Self {
-        JbdState { status: backend.status(), backend: Some(backend), splash: splash.then(splash::Splash::default), ..Default::default() }
+        let mut s = JbdState { status: backend.status(), backend: Some(backend), splash: splash.then(splash::Splash::default), ..Default::default() };
+        // a real launch (with the animation) checks for updates; tests and tools don't
+        s.updates.active = splash;
+        s
     }
 
     /// The JBD layer is on.
@@ -91,6 +104,8 @@ impl JbdState {
 /// Show or hide one of the layout's side areas ("media", "side", "timeline").
 pub fn toggle_area(app: &mut FilmcraftApp, which: &str) {
     let a = &mut app.jbd.areas;
+    // any layout button leaves Director view
+    a.focus = false;
     match which {
         "media" => a.media = !a.media,
         "side" => a.side = !a.side,
@@ -98,6 +113,65 @@ pub fn toggle_area(app: &mut FilmcraftApp, which: &str) {
     }
     app.ui.workspace = "JBD".into();
     app.ui.dock = jbd_workspace(app.jbd.areas);
+}
+
+/// Director view: only the Preview and the Director (half the window each), to watch the
+/// Director work. Turning it off brings the normal layout back.
+pub fn director_view(app: &mut FilmcraftApp, on: bool) {
+    app.jbd.areas = if on { JbdAreas { media: false, side: true, timeline: false, focus: true } } else { JbdAreas::default() };
+    app.ui.workspace = "JBD".into();
+    app.ui.dock = jbd_workspace(app.jbd.areas);
+}
+
+/// The panels JBD's layout uses, in the order the + menu lists them.
+const JBD_PANELS: [crate::dock::PanelKind; 8] = {
+    use crate::dock::PanelKind::*;
+    [Properties, Text, Director, EffectControls, Effects, Project, Timeline, AudioMeters]
+};
+
+/// The tab strip's + was clicked: open the menu of closed panels by it.
+pub fn open_add_panel_menu(ctx: &egui::Context, near: crate::dock::PanelKind, pos: egui::Pos2) {
+    // the frame it opened in: that frame's click is the one on the +, not a click outside
+    let opened = ctx.cumulative_pass_nr();
+    ctx.data_mut(|d| d.insert_temp(egui::Id::new("jbd-add-panel"), (near, pos, opened)));
+}
+
+/// The + menu: JBD's panels that are closed; picking one opens it in that group.
+pub fn add_panel_menu(app: &mut FilmcraftApp, ctx: &egui::Context) {
+    let id = egui::Id::new("jbd-add-panel");
+    let Some((near, pos, opened)) = ctx.data(|d| d.get_temp::<(crate::dock::PanelKind, egui::Pos2, u64)>(id)) else { return };
+    let closed: Vec<crate::dock::PanelKind> = JBD_PANELS.iter().copied().filter(|p| !app.ui.dock.contains(*p)).collect();
+    let t = app.tokens;
+    let mut pick = None;
+    let mut close = false;
+    let area = egui::Area::new(id.with("area")).order(egui::Order::Foreground).fixed_pos(pos + egui::vec2(0.0, 4.0)).show(ctx, |ui| {
+        egui::Frame::popup(ui.style()).show(ui, |ui| {
+            ui.set_min_width(170.0);
+            if closed.is_empty() {
+                ui.label(egui::RichText::new("Every panel is open").size(12.0).color(t.text_dim));
+            }
+            for p in &closed {
+                let b = ui.add(egui::Button::new(egui::RichText::new(p.jbd_title()).size(12.5)).frame(false).min_size(egui::vec2(160.0, 22.0)));
+                app.auto.add(&format!("panel.addMenu.{}", p.id()), b.rect, p.jbd_title());
+                if b.clicked() {
+                    pick = Some(*p);
+                }
+            }
+        });
+    });
+    // a click anywhere else closes it
+    if ctx.cumulative_pass_nr() > opened && ctx.input(|i| i.pointer.any_click()) && !area.response.hovered() {
+        close = true;
+    }
+    if let Some(p) = pick {
+        app.ui.dock.open_near(p, near);
+        app.ui.dock.activate(p);
+        app.ui.focused = p;
+        close = true;
+    }
+    if close || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        ctx.data_mut(|d| d.remove::<(crate::dock::PanelKind, egui::Pos2, u64)>(id));
+    }
 }
 
 /// Every area back, at its default size.
@@ -126,6 +200,8 @@ pub fn after_frame(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
     if !app.jbd.enabled() {
         return;
     }
+    connections::autostart(app);
+    updates::tick(app, ui.ctx());
     settings::show(app, ui.ctx());
     welcome::confirm_window(app, ui.ctx());
     window::resize_edges(ui);

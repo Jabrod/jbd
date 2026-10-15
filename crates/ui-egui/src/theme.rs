@@ -173,48 +173,94 @@ impl Tokens {
         };
         match kind {
             ThemeKind::Dark => dark,
-            ThemeKind::Medium => Tokens {
-                app_bg: Color32::from_rgb(20, 20, 20),
-                header_bg: Color32::from_rgb(0x32, 0x32, 0x32),
-                panel_bg: Color32::from_rgb(0x32, 0x32, 0x32),
-                tab_bg: Color32::from_rgb(0x32, 0x32, 0x32),
-                field_bg: Color32::from_rgb(0x22, 0x22, 0x22),
-                tl_bg: Color32::from_rgb(0x32, 0x32, 0x32),
-                tl_track_bg: Color32::from_rgb(0x32, 0x32, 0x32),
-                tl_track_bg_alt: Color32::from_rgb(0x32, 0x32, 0x32),
-                tl_header_bg: Color32::from_rgb(0x32, 0x32, 0x32),
-                tl_ruler_bg: Color32::from_rgb(0x32, 0x32, 0x32),
-                monitor_bg: Color32::from_rgb(0x32, 0x32, 0x32),
-                row_alt: Color32::from_rgb(50, 50, 50),
-                hover: Color32::from_rgb(64, 64, 64),
-                ..dark
-            },
-            ThemeKind::Light => Tokens {
-                app_bg: Color32::from_rgb(180, 180, 180),
-                header_bg: Color32::from_rgb(214, 214, 214),
-                panel_bg: Color32::from_rgb(232, 232, 232),
-                tab_bg: Color32::from_rgb(232, 232, 232),
-                tab_text: Color32::from_rgb(90, 90, 90),
-                tab_text_active: Color32::from_rgb(20, 20, 20),
-                text: Color32::from_rgb(34, 34, 34),
-                text_dim: Color32::from_rgb(90, 90, 90),
-                text_faint: Color32::from_rgb(140, 140, 140),
-                icon: Color32::from_rgb(60, 60, 60),
-                hover: Color32::from_rgb(210, 210, 210),
-                pressed: Color32::from_rgb(196, 196, 196),
-                field_bg: Color32::from_rgb(250, 250, 250),
-                field_border: Color32::from_rgb(170, 170, 170),
-                separator: Color32::from_rgb(200, 200, 200),
-                row_alt: Color32::from_rgb(224, 224, 224),
-                row_selected: Color32::from_rgb(170, 200, 240),
-                tl_bg: Color32::from_rgb(210, 210, 210),
-                tl_track_bg: Color32::from_rgb(222, 222, 222),
-                tl_track_bg_alt: Color32::from_rgb(228, 228, 228),
-                tl_header_bg: Color32::from_rgb(214, 214, 214),
-                tl_ruler_bg: Color32::from_rgb(226, 226, 226),
-                tl_ruler_text: Color32::from_rgb(80, 80, 80),
-                ..dark
-            },
+            // Graphite: the same calm layering as JBD black, one step lighter. Each surface is a
+            // little lighter than the one behind it (window → panels → fields → hover), and the
+            // hairlines are lighter than the panels so they read as edges, not holes.
+            ThemeKind::Medium => {
+                let window = Color32::from_rgb(0x17, 0x17, 0x1a);
+                let panel = Color32::from_rgb(0x1f, 0x1f, 0x23);
+                let raised = Color32::from_rgb(0x28, 0x28, 0x2d);
+                let hover = Color32::from_rgb(0x31, 0x31, 0x37);
+                let line = Color32::from_rgb(0x2e, 0x2e, 0x34);
+                let line_strong = Color32::from_rgb(0x44, 0x44, 0x4c);
+                Tokens {
+                    app_bg: window,
+                    header_bg: window,
+                    panel_bg: panel,
+                    tab_bg: panel,
+                    tab_text: Color32::from_rgb(0xa3, 0xa3, 0xab),
+                    focus: line_strong,
+                    text: Color32::from_rgb(0xec, 0xec, 0xef),
+                    text_dim: Color32::from_rgb(0xa3, 0xa3, 0xab),
+                    text_faint: Color32::from_rgb(0x6c, 0x6c, 0x75),
+                    icon: Color32::from_rgb(0xa3, 0xa3, 0xab),
+                    hover,
+                    pressed: line_strong,
+                    field_bg: raised,
+                    field_border: line_strong,
+                    separator: line,
+                    row_alt: Color32::from_rgb(0x23, 0x23, 0x27),
+                    row_selected: hover,
+                    tl_bg: panel,
+                    tl_track_bg: panel,
+                    tl_track_bg_alt: panel,
+                    tl_header_bg: panel,
+                    tl_ruler_bg: panel,
+                    tl_ruler_tick: Color32::from_rgb(0x5a, 0x5a, 0x63),
+                    in_out_shade: Color32::from_rgb(0x34, 0x34, 0x3b),
+                    monitor_bg: Color32::from_rgb(0x12, 0x12, 0x14),
+                    ..dark
+                }
+            }
+            // Paper: warm off-whites instead of cold greys, soft hairlines, near-black ink for
+            // text and the playhead. Colours that were white on black (the playhead, a selected
+            // clip's frame, active icons) turn to ink, and the cyan values to the logo's deep
+            // blue, so nothing disappears on the light background. Video keeps a dark surround.
+            ThemeKind::Light => {
+                let window = Color32::from_rgb(0xe4, 0xe2, 0xdd);
+                let paper = Color32::from_rgb(0xf6, 0xf5, 0xf2);
+                let sheet = Color32::from_rgb(0xfd, 0xfd, 0xfb);
+                let hover = Color32::from_rgb(0xec, 0xea, 0xe5);
+                let line = Color32::from_rgb(0xe2, 0xdf, 0xd9);
+                let line_strong = Color32::from_rgb(0xcf, 0xcb, 0xc3);
+                let ink = Color32::from_rgb(0x1c, 0x1c, 0x1e);
+                let deep_blue = Color32::from_rgb(0x2a, 0x45, 0xd6);
+                Tokens {
+                    app_bg: window,
+                    header_bg: paper,
+                    panel_bg: paper,
+                    tab_bg: paper,
+                    tab_text: Color32::from_rgb(0x6e, 0x6c, 0x67),
+                    tab_text_active: ink,
+                    focus: line_strong,
+                    text: ink,
+                    text_dim: Color32::from_rgb(0x5d, 0x5b, 0x56),
+                    text_faint: Color32::from_rgb(0x98, 0x95, 0x8e),
+                    icon: Color32::from_rgb(0x52, 0x50, 0x4b),
+                    icon_active: ink,
+                    hover,
+                    pressed: Color32::from_rgb(0xe0, 0xdd, 0xd6),
+                    field_bg: sheet,
+                    field_border: line_strong,
+                    separator: line,
+                    row_alt: Color32::from_rgb(0xf0, 0xee, 0xea),
+                    row_selected: Color32::from_rgb(0xdd, 0xe4, 0xfb),
+                    hot_text: deep_blue,
+                    tl_bg: Color32::from_rgb(0xef, 0xed, 0xe9),
+                    tl_track_bg: Color32::from_rgb(0xef, 0xed, 0xe9),
+                    tl_track_bg_alt: Color32::from_rgb(0xef, 0xed, 0xe9),
+                    tl_header_bg: paper,
+                    tl_ruler_bg: paper,
+                    tl_ruler_tick: Color32::from_rgb(0xb4, 0xb0, 0xa8),
+                    tl_ruler_text: Color32::from_rgb(0x6e, 0x6c, 0x67),
+                    playhead: ink,
+                    in_out_shade: Color32::from_rgb(0xdc, 0xd8, 0xd0),
+                    clip_selected_border: ink,
+                    monitor_bg: Color32::from_rgb(0x1c, 0x1c, 0x1e),
+                    timecode: deep_blue,
+                    ..dark
+                }
+            }
         }
     }
 
@@ -338,12 +384,13 @@ pub fn apply_visuals(ctx: &egui::Context, t: &Tokens) {
     v.faint_bg_color = t.row_alt;
     v.override_text_color = Some(t.text);
     v.selection.bg_fill = t.accent;
-    v.selection.stroke = Stroke::new(1.0, Color32::WHITE);
+    v.selection.stroke = Stroke::new(1.0, if t.kind == ThemeKind::Light { t.text } else { Color32::WHITE });
     v.hyperlink_color = t.accent;
     v.window_stroke = Stroke::new(1.0, t.field_border);
     v.window_corner_radius = egui::CornerRadius::same(6);
     v.menu_corner_radius = egui::CornerRadius::same(6);
-    v.popup_shadow = egui::epaint::Shadow { offset: [0, 4], blur: 16, spread: 0, color: Color32::from_black_alpha(140) };
+    let shadow = if t.kind == ThemeKind::Light { 40 } else { 140 };
+    v.popup_shadow = egui::epaint::Shadow { offset: [0, 4], blur: 16, spread: 0, color: Color32::from_black_alpha(shadow) };
     v.window_shadow = v.popup_shadow;
     for w in [&mut v.widgets.noninteractive, &mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active, &mut v.widgets.open] {
         w.corner_radius = egui::CornerRadius::same(t.radius_sm as u8);

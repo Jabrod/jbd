@@ -248,6 +248,15 @@ struct MeMonth {
     /// Sent by newer jabrod.com versions; the app's table is the fallback.
     #[serde(default)]
     limit: Option<u32>,
+    /// AI credits (1 credit = $0.01 of AI cost): what the Director spends and checks. When the
+    /// server sends them, the account menu shows these, so both always agree.
+    #[serde(default)]
+    credits: Option<MeCredits>,
+}
+#[derive(Deserialize)]
+struct MeCredits {
+    used: u32,
+    limit: u32,
 }
 
 /// GET /api/desktop/me: the current tier and this month's AI use.
@@ -484,7 +493,11 @@ impl Inner {
     fn update_usage(&self, access: &str, stored: &Stored) {
         if let Ok(me) = fetch_me(access) {
             let tier = me.tier.as_deref().map(Tier::from_server).unwrap_or_else(|| Tier::from_server(&stored.tier));
-            let usage = me.usage.map(|u| Usage { calls: u.month.calls, limit: u.month.limit.unwrap_or_else(|| monthly_ai_limit(tier, stored.trial)) });
+            let usage = me.usage.map(|u| match u.month.credits {
+                // credits first: the same numbers the Director's ring shows
+                Some(c) => Usage { calls: c.used, limit: c.limit },
+                None => Usage { calls: u.month.calls, limit: u.month.limit.unwrap_or_else(|| monthly_ai_limit(tier, stored.trial)) },
+            });
             self.set(|s| {
                 s.tier = tier;
                 if usage.is_some() {
@@ -697,6 +710,43 @@ impl AccountBackend for JabrodAccount {
             TokenOutcome::Unreachable(e) => Err(format!("AI needs an internet connection. Couldn't reach jabrod.com: {e}")),
         }
     }
+}
+
+/// The latest JBD release from jabrod.com (the in-app update check). Blocking; call it from a
+/// worker thread.
+pub fn latest_release() -> Result<crate::Release, String> {
+    let mut resp = agent().get(&format!("{}/api/releases/jbd", platform_url())).call().map_err(|e| e.to_string())?;
+    if resp.status().as_u16() != 200 {
+        return Err(format!("jabrod.com answered {}", resp.status().as_u16()));
+    }
+    let text = resp.body_mut().read_to_string().map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| format!("unexpected answer: {e}"))
+}
+
+/// Send a problem report to jabrod.com (saved as a support ticket and emailed to
+/// contact@jabrod.com, so the answer comes back by email). Returns the ticket number. Blocking.
+pub fn send_report(access_token: &str, report: &crate::Report) -> Result<u64, String> {
+    let context: serde_json::Map<String, serde_json::Value> =
+        report.context.iter().map(|(k, v)| (k.clone(), serde_json::Value::String(v.chars().take(480).collect()))).collect();
+    let mut body = serde_json::json!({"topic": report.topic, "subject": report.subject, "message": report.message, "context": context});
+    if let Some(log) = &report.log {
+        // the end of the log is what explains a problem; the server keeps at most 20 000 characters
+        let tail: String = log.chars().rev().take(20_000).collect::<Vec<_>>().into_iter().rev().collect();
+        body["log"] = serde_json::Value::String(tail);
+    }
+    let mut resp = agent()
+        .post(&format!("{}/api/support?client_id={}", platform_url(), crate::CLIENT_ID))
+        .header("Content-Type", "application/json")
+        .header("Authorization", &format!("Bearer {access_token}"))
+        .send(body.to_string())
+        .map_err(|e| e.to_string())?;
+    let status = resp.status().as_u16();
+    let text = resp.body_mut().read_to_string().unwrap_or_default();
+    let v: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
+    if status == 200 {
+        return v.get("id").and_then(serde_json::Value::as_u64).ok_or_else(|| "jabrod.com didn't return a ticket number".to_string());
+    }
+    Err(v.get("error_description").and_then(serde_json::Value::as_str).map(str::to_string).unwrap_or_else(|| format!("jabrod.com answered {status}")))
 }
 
 #[cfg(test)]

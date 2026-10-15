@@ -253,6 +253,9 @@ fn list_layers(s: &Session, clip: ClipId) -> Result<Value> {
     let ph = s.playhead();
     let mt = it.source_time_at(ph.clamp(it.start, it.end() - Tick(1)));
     let shown = item_layer_specs(it, mt, size);
+    // where the layer lands in the finished frame: the clip's own Motion (position, scale,
+    // rotation, anchor) applied to the layer's quad
+    let motion = filmcraft_render::motion_matrix(seq, it, size, it.effect_time_at(ph.clamp(it.start, it.end() - Tick(1))));
     let layers: Vec<Value> = layer_indices(&it.effects)
         .iter()
         .enumerate()
@@ -278,13 +281,14 @@ fn list_layers(s: &Session, clip: ClipId) -> Result<Value> {
                 "styles": extra.map(|x| serde_json::to_value(&x.runs).unwrap_or_default()).unwrap_or(json!([])),
                 "localBounds": layer_local_bounds(&sp),
                 "quad": q.iter().map(|p| [p.x, p.y]).collect::<Vec<_>>(),
+                "frameQuad": q.iter().map(|p| motion.apply(*p)).map(|p| [p.x, p.y]).collect::<Vec<_>>(),
             }))
         })
         .collect();
     let meta = it.graphic.as_deref().map(|m| serde_json::to_value(m).unwrap_or_default());
     let source = s.project.source_graphics.contains_key(&it.item).then_some(it.item.0);
     Ok(
-        json!({"clip": clip.0, "name": it.name, "start": it.start.0, "duration": it.duration.0, "canvas": [size.0, size.1], "layers": layers, "graphic": meta, "sourceGraphic": source}),
+        json!({"clip": clip.0, "name": it.name, "start": it.start.0, "duration": it.duration.0, "canvas": [size.0, size.1], "frame": [seq.settings.width, seq.settings.height], "layers": layers, "graphic": meta, "sourceGraphic": source}),
     )
 }
 
