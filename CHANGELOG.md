@@ -1,4 +1,8 @@
-## 1.1.0
+# Changelog
+
+All notable changes to JBD, newest first. Each version is a tag (v1.1.0, …) and a release on GitHub; the same notes are at jabrod.com/jbd/changelog and in the app under Help ▸ What's New.
+
+## 1.1.0 · 16 October 2026
 
 ### The AI Director
 - **Edit by describing what you want.** The Director plans the edit, works step by step on your timeline, and checks the result before it reports back. Every change can be undone.
@@ -22,8 +26,12 @@
 - The Director's undo step never includes edits you make while it works.
 - Clips still being generated when JBD closes can be fetched later.
 
-## 1.0.0
+## 1.0.0 · 8 October 2026
+The first JBD built on FilmCraft: a new, faster editor.
 - A new, faster editor: rebuilt timeline and preview, with ripple, roll, slip and slide trims.
 - Colour grading with curves, wheels, looks and scopes; audio mixing with loudness meters.
 - Titles and caption tracks, speech to text on your computer, and 4K export.
 - Templates for YouTube, Reels, Shorts, square and 4:5, and the new start screen.
+
+## 0.1.0 · 3 October 2026
+The first JBD (an earlier app, since replaced): an AI Director with chat history and web research, motion graphics with custom keyframes, timeline ranges, clip looping, transitions, colour looks and export controls.

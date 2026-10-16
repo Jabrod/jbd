@@ -4,13 +4,13 @@
 //!   (`/api/releases/jbd`, a background thread). When it is newer than this build, an "Update"
 //!   chip appears in the title bar. "Update" opens the Microsoft Store page for copies installed
 //!   from the Store (the Store installs it), and the installer download for everyone else.
-//! - **What's New**: the changelog bundled into the app (`docs/jbd/CHANGELOG.md`, so it works
+//! - **What's New**: the changelog bundled into the app (`CHANGELOG.md` at the repository root, so it works
 //!   offline). It opens by itself once, the first time a new version starts.
 //! - **Report a Problem**: a short form sent to jabrod.com as a support ticket (it is also
 //!   emailed to contact@jabrod.com, and the answer comes back by email), with the end of JBD's log
 //!   if the person allows it. Signed out, it opens an email instead.
 //!
-//! To change how often JBD checks: [`CHECK_EVERY`]. The changelog text: docs/jbd/CHANGELOG.md.
+//! To change how often JBD checks: [`CHECK_EVERY`]. The changelog text: CHANGELOG.md at the repository root.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -28,7 +28,7 @@ const CHECK_EVERY: f64 = 6.0 * 3600.0;
 /// JBD's Microsoft Store listing.
 const STORE_ID: &str = "9P0KS6185QSX";
 /// The changelog, bundled into the app.
-pub const CHANGELOG: &str = include_str!("../../../../docs/jbd/CHANGELOG.md");
+pub const CHANGELOG: &str = include_str!("../../../../CHANGELOG.md");
 
 /// Which window is open.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -430,6 +430,6 @@ mod tests {
 
     #[test]
     fn the_changelog_names_this_version() {
-        assert!(CHANGELOG.contains(&format!("## {VERSION}")), "docs/jbd/CHANGELOG.md needs a \"## {VERSION}\" section");
+        assert!(CHANGELOG.contains(&format!("## {VERSION}")), "CHANGELOG.md needs a \"## {VERSION}\" section");
     }
 }
