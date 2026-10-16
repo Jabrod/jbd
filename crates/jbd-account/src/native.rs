@@ -749,6 +749,38 @@ pub fn send_report(access_token: &str, report: &crate::Report) -> Result<u64, St
     Err(v.get("error_description").and_then(serde_json::Value::as_str).map(str::to_string).unwrap_or_else(|| format!("jabrod.com answered {status}")))
 }
 
+/// This month's AI usage (Settings ▸ Usage). Blocking.
+pub fn usage_report(access_token: &str) -> Result<crate::UsageReport, String> {
+    let mut resp = agent()
+        .get(&format!("{}/api/desktop/usage?client_id={}", platform_url(), crate::CLIENT_ID))
+        .header("Authorization", &format!("Bearer {access_token}"))
+        .call()
+        .map_err(|e| e.to_string())?;
+    let status = resp.status().as_u16();
+    let text = resp.body_mut().read_to_string().map_err(|e| e.to_string())?;
+    if status != 200 {
+        return Err(format!("jabrod.com answered {status}"));
+    }
+    serde_json::from_str(&text).map_err(|e| format!("unexpected answer: {e}"))
+}
+
+/// Change pay-as-you-go: `{"cap": minor units}`, `{"paused": bool}` or `{"cancel": true}`. Blocking.
+pub fn payg_update(access_token: &str, change: &serde_json::Value) -> Result<(), String> {
+    let mut resp = agent()
+        .post(&format!("{}/api/desktop/payg?client_id={}", platform_url(), crate::CLIENT_ID))
+        .header("Content-Type", "application/json")
+        .header("Authorization", &format!("Bearer {access_token}"))
+        .send(change.to_string())
+        .map_err(|e| e.to_string())?;
+    let status = resp.status().as_u16();
+    if status == 200 {
+        return Ok(());
+    }
+    let text = resp.body_mut().read_to_string().unwrap_or_default();
+    let v: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
+    Err(v.get("error_description").and_then(serde_json::Value::as_str).map(str::to_string).unwrap_or_else(|| format!("jabrod.com answered {status}")))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

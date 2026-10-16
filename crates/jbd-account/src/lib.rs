@@ -254,6 +254,18 @@ impl DemoAccount {
         DemoAccount { status: std::sync::Mutex::new(status) }
     }
 
+    /// The same, on the free plan (tests of what Pro unlocks).
+    pub fn free(name: &str, email: &str) -> Self {
+        let d = DemoAccount::new(name, email);
+        {
+            let mut s = d.lock();
+            s.tier = Tier::Free;
+            s.pro_until = None;
+            s.usage = None;
+        }
+        d
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, AccountStatus> {
         self.status.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
     }
@@ -433,5 +445,133 @@ mod release_tests {
         assert!(!is_newer("1.1.0-beta", "1.1.0"));
         assert!(is_newer("v1.0.1", "1.0.0"));
         assert!(!is_newer("garbage", "1.0.0"));
+    }
+}
+
+// --------------------------------------------------------------------------------------- usage
+
+/// This month's AI usage, as jabrod.com/api/desktop/usage reports it (Settings ▸ Usage).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct UsageReport {
+    pub plan: String,
+    pub credits: CreditCount,
+    pub by_kind: Vec<KindUse>,
+    pub by_model: Vec<ModelUse>,
+    pub days: Vec<DayUse>,
+    pub payg: Option<PaygInfo>,
+    pub urls: UsageUrls,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CreditCount {
+    pub used: u64,
+    pub limit: u64,
+}
+
+/// Credits by what they were spent on ("Thinking", "Video", "Voiceover", "Research").
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct KindUse {
+    pub kind: String,
+    pub credits: u64,
+    pub calls: u64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ModelUse {
+    pub model: String,
+    pub kind: String,
+    pub credits: u64,
+    pub calls: u64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DayUse {
+    /// YYYY-MM-DD
+    pub day: String,
+    pub credits: u64,
+}
+
+/// Pay-as-you-go: money in minor units of `currency` (paise, cents).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PaygInfo {
+    /// "pending", "active", "on_hold" or "cancelled".
+    pub status: String,
+    pub paused: bool,
+    pub currency: String,
+    pub price_per_credit: u64,
+    /// The monthly spending limit.
+    pub cap: u64,
+    /// Credits used past the allowance this month, and what they cost.
+    pub used: u64,
+    pub spent: u64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct UsageUrls {
+    pub upgrade: String,
+    pub payg: String,
+}
+
+/// "₹1,000" / "$12.00" from minor units.
+pub fn format_money(minor: u64, currency: &str) -> String {
+    if currency.eq_ignore_ascii_case("INR") {
+        let rupees = minor / 100;
+        let paise = minor % 100;
+        let whole = group_indian(rupees);
+        if paise == 0 { format!("₹{whole}") } else { format!("₹{whole}.{paise:02}") }
+    } else {
+        format!("${}.{:02}", minor / 100, minor % 100)
+    }
+}
+
+/// 100000 → "1,00,000" (Indian digit grouping).
+fn group_indian(n: u64) -> String {
+    let s = n.to_string();
+    if s.len() <= 3 {
+        return s;
+    }
+    let (head, last3) = s.split_at(s.len() - 3);
+    let mut parts: Vec<String> = Vec::new();
+    let mut h = head.to_string();
+    while h.len() > 2 {
+        let cut = h.len() - 2;
+        parts.insert(0, h[cut..].to_string());
+        h.truncate(cut);
+    }
+    if !h.is_empty() {
+        parts.insert(0, h);
+    }
+    format!("{},{last3}", parts.join(","))
+}
+
+#[cfg(test)]
+mod usage_tests {
+    use super::*;
+
+    #[test]
+    fn money_reads_like_money() {
+        assert_eq!(format_money(100_000, "INR"), "₹1,000");
+        assert_eq!(format_money(150, "INR"), "₹1.50");
+        assert_eq!(format_money(10_000_000, "INR"), "₹1,00,000");
+        assert_eq!(format_money(1_200, "USD"), "$12.00");
+        assert_eq!(format_money(2, "USD"), "$0.02");
+    }
+
+    #[test]
+    fn a_usage_report_reads_from_the_server_answer() {
+        let r: UsageReport = serde_json::from_str(
+            r#"{"plan":"pro","credits":{"used":120,"limit":1000},"byKind":[{"kind":"Video","credits":90,"calls":3}],"byModel":[],"days":[{"day":"2026-10-16","credits":120}],"payg":{"status":"active","paused":false,"currency":"INR","pricePerCredit":150,"cap":100000,"used":0,"spent":0},"urls":{"upgrade":"u","payg":"p"}}"#,
+        )
+        .unwrap_or_default();
+        assert_eq!(r.credits.limit, 1000);
+        assert_eq!(r.by_kind[0].kind, "Video");
+        assert_eq!(r.payg.map(|p| p.cap), Some(100_000));
     }
 }

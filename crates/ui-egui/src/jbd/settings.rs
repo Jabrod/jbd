@@ -17,9 +17,10 @@ use crate::FilmcraftApp;
 use crate::theme::Tokens;
 
 /// JBD's sections: id, title, what it's for, and the schema pages whose wired settings it shows.
-const SECTIONS: [(&str, &str, &str, &[&str]); 11] = [
+const SECTIONS: [(&str, &str, &str, &[&str]); 12] = [
     ("general", "General", "What JBD does when it opens, and saving your work.", &["general", "autoSave"]),
     ("account", "Account", "Your Jabrod account, plan and AI credits.", &[]),
+    ("usage", "Usage", "AI credits used this month, and pay-as-you-go.", &[]),
     ("appearance", "Appearance", "Theme and contrast.", &["appearance"]),
     ("editing", "Editing", "The timeline and trimming.", &["timeline", "trim"]),
     ("playback", "Playback", "Previewing your edit.", &["playback", "memory"]),
@@ -128,6 +129,7 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
                 ui.set_width(inner.width() - 12.0);
                 match sid {
                     "account" => account(app, ui, ctx, &t),
+                    "usage" => super::usage::page(app, ui, ctx, &t),
                     "connections" => super::connections::connections(app, ui, ctx, &t),
                     "connectors" => super::connections::connectors(app, ui, &t),
                     "keyboard" => {

@@ -2,6 +2,14 @@
 
 All notable changes to JBD, newest first. Each version is a tag (v1.1.0, …) and a release on GitHub; the same notes are at jabrod.com/jbd/changelog and in the app under Help ▸ What's New.
 
+## 1.1.1 · October 2026
+
+### JBD Pro
+- **The AI Director is part of JBD Pro**, with **1,000 AI credits every month** for thinking, video and voiceover.
+- **Pay-as-you-go:** keep using the Director past your monthly credits, at ₹1.50 per extra credit ($0.02 outside India), charged once a month by UPI AutoPay or card, with a monthly spending limit you set.
+- **Settings ▸ Usage** shows the credits you used this month, what used them, the models, a bar per day, and your pay-as-you-go spending.
+- One plan: Pro for a year, ₹4,999 in India and $49.99 elsewhere.
+
 ## 1.1.0 · 16 October 2026
 
 ### The AI Director

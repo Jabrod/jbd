@@ -28,6 +28,7 @@ pub mod splash;
 pub mod style;
 pub mod titlebar;
 pub mod updates;
+pub mod usage;
 pub mod welcome;
 pub mod window;
 
@@ -79,6 +80,8 @@ pub struct JbdState {
     pub director: director_run::Director,
     /// Update check, What's New and Report a Problem (`updates.rs`).
     pub updates: updates::Updates,
+    /// Settings ▸ Usage: AI credits and pay-as-you-go (`usage.rs`).
+    pub ai_usage: usage::UsageState,
     repaint_hooked: bool,
 }
 

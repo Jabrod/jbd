@@ -124,6 +124,11 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     let ui = &mut child;
 
     header(app, ui, &t);
+    // the AI Director is a JBD Pro feature: the free plan sees what Pro gives instead of the chat
+    if app.jbd.status.is_signed_in() && !app.jbd.status.is_pro() {
+        pro_wall(app, ui, &t);
+        return;
+    }
     // the prompt box grows with its text up to about a third of the tab, then scrolls inside
     let max_text = (inner.height() * 0.32).max(72.0);
 
@@ -146,6 +151,34 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         footer(app, ui, &t);
     });
     egui::CentralPanel::no_frame().show(ui, |ui| transcript(app, ui, &t));
+}
+
+/// The free plan's Director: what JBD Pro adds, and the way to get it.
+fn pro_wall(app: &mut FilmcraftApp, ui: &mut egui::Ui, t: &Tokens) {
+    ui.add_space(18.0);
+    egui::Frame::new().fill(t.field_bg).stroke(Stroke::new(1.0, t.field_border)).corner_radius(12.0).inner_margin(18.0).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.label(RichText::new("The AI Director is part of JBD Pro").font(Tokens::semibold(16.0)).color(t.text));
+        ui.add_space(4.0);
+        ui.label(RichText::new("Describe the edit you want, and the Director plans it and edits your timeline step by step.").size(12.5).color(t.text_dim));
+        ui.add_space(10.0);
+        for line in [
+            "1,000 AI credits every month: thinking, video and voiceover",
+            "Generate shots with sound and add narration",
+            "It checks its work on rendered frames before it reports back",
+            "Pay-as-you-go when you need more",
+        ] {
+            ui.label(RichText::new(format!("•  {line}")).size(12.0).color(t.text_dim));
+        }
+        ui.add_space(12.0);
+        let b = style::small_primary_button(ui, "Upgrade to Pro", t);
+        app.auto.add("director.upgrade", b.rect, "Upgrade to Pro");
+        if b.clicked() {
+            super::open_page(ui.ctx(), jbd_account::Page::Upgrade);
+        }
+        ui.add_space(4.0);
+        ui.label(RichText::new("₹4,999 a year in India, $49.99 elsewhere. Pay once by UPI or card; no automatic renewal.").size(11.0).color(t.text_faint));
+    });
 }
 
 fn header(app: &mut FilmcraftApp, ui: &mut egui::Ui, t: &Tokens) {

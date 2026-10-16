@@ -641,3 +641,65 @@ fn updates_whats_new_and_report_a_problem() {
         let _ = img.save(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/ui-update-report.png"));
     }
 }
+
+/// The free plan sees what Pro gives in the Director instead of the chat. Saves
+/// target/tmp/ui-director-prowall.png.
+#[test]
+fn the_free_plan_sees_the_pro_wall_in_the_director() {
+    let mut session = Session::default();
+    session.execute("file.openDemoProject", json!({})).expect("demo project");
+    let (tx, rx) = channel();
+    let app = FilmcraftApp::new(session).with_account(Arc::new(DemoAccount::free("Test", "test@example.com")), false).with_control(rx);
+    let harness = Harness::builder().with_size(egui::vec2(1600.0, 980.0)).with_max_steps(10_000).build_eframe(move |_cc| app);
+    let mut d = Driver { harness, tx };
+    d.frames(4);
+    d.ok("ui.set", json!({"mode": "Edit"}));
+    d.frames(3);
+    d.ok("ui.panel.show", json!({"panel": "Director"}));
+    d.frames(4);
+    let ids: Vec<String> = d
+        .ok("ui.elements", json!({"prefix": "director."}))
+        .as_array()
+        .map(|a| a.iter().filter_map(|e| e["id"].as_str().map(str::to_string)).collect())
+        .unwrap_or_default();
+    assert!(ids.iter().any(|i| i == "director.upgrade"), "the Upgrade button shows: {ids:?}");
+    assert!(!ids.iter().any(|i| i == "director.input"), "no prompt box on the free plan: {ids:?}");
+    if let Ok(img) = render(&mut d.harness) {
+        let _ = img.save(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/ui-director-prowall.png"));
+    }
+}
+
+/// Settings ▸ Usage with pay-as-you-go on. Saves target/tmp/ui-settings-usage.png.
+#[test]
+fn settings_usage_shows_credits_and_pay_as_you_go() {
+    let mut d = Driver::new();
+    d.ok("ui.set", json!({"mode": "Edit"}));
+    d.frames(3);
+    let report: jbd_account::UsageReport = serde_json::from_value(json!({
+        "plan": "pro",
+        "credits": {"used": 940, "limit": 1000},
+        "byKind": [{"kind": "Video", "credits": 610, "calls": 9}, {"kind": "Thinking", "credits": 280, "calls": 212}, {"kind": "Voiceover", "credits": 50, "calls": 4}],
+        "byModel": [{"model": "google/veo-3.1-lite", "kind": "Video", "credits": 610, "calls": 9}, {"model": "anthropic/claude-sonnet-5.5", "kind": "Thinking", "credits": 280, "calls": 212}],
+        "days": [{"day": "2026-10-02", "credits": 120}, {"day": "2026-10-09", "credits": 410}, {"day": "2026-10-15", "credits": 410}],
+        "payg": {"status": "active", "paused": false, "currency": "INR", "pricePerCredit": 150, "cap": 100000, "used": 120, "spent": 18000},
+        "urls": {"upgrade": "https://jabrod.com/jbd/upgrade", "payg": "https://jabrod.com/jbd/payg"}
+    }))
+    .unwrap_or_default();
+    {
+        let app = d.harness.state_mut();
+        app.jbd.ai_usage.preload(report);
+        app.jbd.settings_open = true;
+        app.jbd.settings_section = "usage".into();
+    }
+    d.frames(6);
+    let ids: Vec<String> = d
+        .ok("ui.elements", json!({"prefix": "usage."}))
+        .as_array()
+        .map(|a| a.iter().filter_map(|e| e["id"].as_str().map(str::to_string)).collect())
+        .unwrap_or_default();
+    assert!(ids.iter().any(|i| i == "usage.payg.pause"), "pause shows: {ids:?}");
+    assert!(ids.iter().any(|i| i == "usage.payg.cap.100000"), "the limit presets show: {ids:?}");
+    if let Ok(img) = render(&mut d.harness) {
+        let _ = img.save(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/ui-settings-usage.png"));
+    }
+}

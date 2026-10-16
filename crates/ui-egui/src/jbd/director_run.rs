@@ -415,6 +415,10 @@ pub fn send(app: &mut FilmcraftApp, ctx: &egui::Context) {
             lock(&app.jbd.director.shared).push(Entry::Error("Sign in to your Jabrod account to use the Director.".into()));
             return;
         };
+        if !app.jbd.status.is_pro() {
+            lock(&app.jbd.director.shared).push(Entry::Error("The AI Director is part of JBD Pro. Upgrade at jabrod.com/jbd/upgrade.".into()));
+            return;
+        }
         app.jbd.director.input.clear();
         app.jbd.director.pasted.clear();
         let context: Vec<ClipRef> = std::mem::take(&mut app.jbd.director.context);
