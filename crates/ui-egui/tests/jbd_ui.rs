@@ -682,7 +682,24 @@ fn settings_usage_shows_credits_and_pay_as_you_go() {
         "byModel": [{"model": "google/veo-3.1-lite", "kind": "Video", "credits": 610, "calls": 9}, {"model": "anthropic/claude-sonnet-5.5", "kind": "Thinking", "credits": 280, "calls": 212}],
         "days": [{"day": "2026-10-02", "credits": 120}, {"day": "2026-10-09", "credits": 410}, {"day": "2026-10-15", "credits": 410}],
         "payg": {"status": "active", "paused": false, "currency": "INR", "pricePerCredit": 150, "cap": 100000, "used": 120, "spent": 18000},
-        "urls": {"upgrade": "https://jabrod.com/jbd/upgrade", "payg": "https://jabrod.com/jbd/payg"}
+        "urls": {"upgrade": "https://jabrod.com/jbd/upgrade", "payg": "https://jabrod.com/jbd/payg"},
+        "range": 30,
+        "rangeKinds": [
+            {"kind": "Thinking", "credits": 280, "calls": 212, "tokens": 4500000},
+            {"kind": "Video", "credits": 610, "calls": 9, "tokens": 0},
+            {"kind": "Voiceover", "credits": 50, "calls": 4, "tokens": 0},
+            {"kind": "Research", "credits": 12, "calls": 85, "tokens": 0}
+        ],
+        "daily": [
+            {"day": "2026-10-13", "kind": "Thinking", "credits": 120, "tokens": 1900000},
+            {"day": "2026-10-13", "kind": "Video", "credits": 300, "tokens": 0},
+            {"day": "2026-10-14", "kind": "Thinking", "credits": 40, "tokens": 480000},
+            {"day": "2026-10-15", "kind": "Thinking", "credits": 70, "tokens": 1060000},
+            {"day": "2026-10-15", "kind": "Voiceover", "credits": 50, "tokens": 0},
+            {"day": "2026-10-16", "kind": "Thinking", "credits": 50, "tokens": 990000},
+            {"day": "2026-10-16", "kind": "Video", "credits": 310, "tokens": 0},
+            {"day": "2026-10-16", "kind": "Research", "credits": 12, "tokens": 0}
+        ]
     }))
     .unwrap_or_default();
     {
@@ -697,6 +714,7 @@ fn settings_usage_shows_credits_and_pay_as_you_go() {
         .as_array()
         .map(|a| a.iter().filter_map(|e| e["id"].as_str().map(str::to_string)).collect())
         .unwrap_or_default();
+    assert!(ids.iter().any(|i| i == "usage.range.7") && ids.iter().any(|i| i == "usage.view.tokens"), "the range and view switches show: {ids:?}");
     assert!(ids.iter().any(|i| i == "usage.payg.pause"), "pause shows: {ids:?}");
     assert!(ids.iter().any(|i| i == "usage.payg.cap.100000"), "the limit presets show: {ids:?}");
     if let Ok(img) = render(&mut d.harness) {

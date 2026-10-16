@@ -750,9 +750,9 @@ pub fn send_report(access_token: &str, report: &crate::Report) -> Result<u64, St
 }
 
 /// This month's AI usage (Settings ▸ Usage). Blocking.
-pub fn usage_report(access_token: &str) -> Result<crate::UsageReport, String> {
+pub fn usage_report(access_token: &str, range_days: u32) -> Result<crate::UsageReport, String> {
     let mut resp = agent()
-        .get(&format!("{}/api/desktop/usage?client_id={}", platform_url(), crate::CLIENT_ID))
+        .get(&format!("{}/api/desktop/usage?client_id={}&range={range_days}", platform_url(), crate::CLIENT_ID))
         .header("Authorization", &format!("Bearer {access_token}"))
         .call()
         .map_err(|e| e.to_string())?;

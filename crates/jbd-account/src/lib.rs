@@ -461,6 +461,32 @@ pub struct UsageReport {
     pub days: Vec<DayUse>,
     pub payg: Option<PaygInfo>,
     pub urls: UsageUrls,
+    /// The days the cards and the chart cover (7, 30 or 90).
+    pub range: u32,
+    /// Per kind over `range` (always Thinking, Video, Voiceover, Research).
+    pub range_kinds: Vec<RangeKind>,
+    /// Per day and kind over `range` (days without use are left out).
+    pub daily: Vec<DailyUse>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RangeKind {
+    pub kind: String,
+    pub credits: u64,
+    pub calls: u64,
+    /// Input + output tokens (the Director's thinking only).
+    pub tokens: u64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DailyUse {
+    /// YYYY-MM-DD (UTC)
+    pub day: String,
+    pub kind: String,
+    pub credits: u64,
+    pub tokens: u64,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

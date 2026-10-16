@@ -20,7 +20,7 @@ use crate::theme::Tokens;
 const SECTIONS: [(&str, &str, &str, &[&str]); 12] = [
     ("general", "General", "What JBD does when it opens, and saving your work.", &["general", "autoSave"]),
     ("account", "Account", "Your Jabrod account, plan and AI credits.", &[]),
-    ("usage", "Usage", "AI credits used this month, and pay-as-you-go.", &[]),
+    ("usage", "Usage", "What the AI Director used, your monthly credits and pay-as-you-go.", &[]),
     ("appearance", "Appearance", "Theme and contrast.", &["appearance"]),
     ("editing", "Editing", "The timeline and trimming.", &["timeline", "trim"]),
     ("playback", "Playback", "Previewing your edit.", &["playback", "memory"]),
