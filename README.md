@@ -46,12 +46,13 @@ account is required to sign in; projects and media remain on your computer.
 
 ## Versions
 
-The current version is **1.1.0**. Every version is tagged in this repository and published on the
+The current version is **1.1.1**. Every version is tagged in this repository and published on the
 [Releases](https://github.com/Jabrod/jbd/releases) page, on [jabrod.com](https://jabrod.com/jbd) and
 in the Microsoft Store. JBD checks for new versions itself (Help ▸ Check for Updates).
 
 | Version | Date | Highlights | |
 |---|---|---|---|
+| [1.1.1](https://github.com/Jabrod/jbd/releases/tag/v1.1.1) | 16 Oct 2026 | JBD Pro: the Director with 1,000 monthly AI credits, pay-as-you-go, Settings ▸ Usage | [Changes](CHANGELOG.md#111--october-2026) |
 | [1.1.0](https://github.com/Jabrod/jbd/releases/tag/v1.1.0) | 16 Oct 2026 | The AI Director; What's New, Check for Updates and Report a Problem; refined themes | [Changes](CHANGELOG.md#110--16-october-2026) |
 | [1.0.0](https://github.com/Jabrod/jbd/releases/tag/v1.0.0) | 8 Oct 2026 | The first JBD built on FilmCraft: a new, faster editor | [Changes](CHANGELOG.md#100--8-october-2026) |
 
