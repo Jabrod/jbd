@@ -35,6 +35,8 @@ use serde_json::Value;
 
 pub mod agent;
 pub mod digest;
+pub mod edits;
+pub mod footage;
 pub mod look;
 pub mod overlay;
 pub mod production;
@@ -158,6 +160,24 @@ pub struct Ask {
     pub credits: u32,
     /// Set by the UI when the person answers.
     pub answer: Option<bool>,
+    /// For a planned edit of the person's footage: what it changes, drawn as a before/after
+    /// strip so they can see it before saying yes (`edits.rs`).
+    pub preview: Option<EditPreview>,
+}
+
+/// The planned edit, as the review card shows it.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct EditPreview {
+    /// Timeline length now and after the edit (seconds; the after is an estimate when some
+    /// steps can't be measured beforehand).
+    pub before: f64,
+    pub after: f64,
+    /// What goes, in today's timeline seconds: shaded on the "before" strip.
+    pub removed: Vec<(f64, f64)>,
+    /// Where something is added or changed (titles, transitions, music): marked on the strip.
+    pub marks: Vec<f64>,
+    /// One plain line per change: "Cut 14 pauses (23.4 s)".
+    pub lines: Vec<String>,
 }
 
 /// What a request ended up doing (for the UI's "Undo all").

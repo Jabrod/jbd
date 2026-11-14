@@ -107,6 +107,20 @@ impl Editor for SessionEditor {
                 let png = crate::look::contact_sheet(&frames)?;
                 Ok(json!({"pngBase64": base64::engine::general_purpose::STANDARD.encode(png)}))
             }
+            // what the app answers on its footage thread (director_run.rs read_footage)
+            "jbd.analyze" | "jbd.transcribe" => {
+                let seq = s.state.active_sequence.ok_or("no sequence")?;
+                let project = s.project.clone();
+                let provider = s.media.provider(project.clone(), s.services.clone());
+                if method == "jbd.analyze" {
+                    crate::footage::analyze(&project, seq, &provider, &params, &|| false)
+                } else {
+                    let items: Vec<u64> = params["items"].as_array().into_iter().flatten().filter_map(Value::as_u64).collect();
+                    let t = crate::footage::transcriber(s.transcriber.clone(), "whisper-base")?;
+                    let list = crate::footage::transcribe(&project, &provider, &items, t.as_ref(), None, &|| false)?;
+                    Ok(json!({"transcripts": list.into_iter().map(|(item, t)| json!({"item": item, "transcript": t})).collect::<Vec<_>>()}))
+                }
+            }
             other => Err(format!("{other} isn't available")),
         }
     }
@@ -606,4 +620,359 @@ fn a_logo_on_white_loses_its_white_box_but_keeps_its_mark() {
     let mark = at(0.25, 0.75);
     assert!(corner.iter().any(|c| *c < 200), "the white box is keyed out: {corner:?}");
     assert!(mark.iter().all(|c| *c < 25), "the black mark stays (10, 10, 10): {mark:?}");
+}
+
+// ---- editing the person's own footage (read_footage, edit_timeline) ----------------------------
+
+/// A 16-bit mono WAV at 48 kHz: a voice-like tone where `pattern` says loud, quiet room noise
+/// elsewhere. Real bytes on disk, imported and decoded by the engine like any recording.
+fn write_wav(path: &Path, pattern: &[(f64, bool)]) {
+    let rate = 48_000u32;
+    let mut samples: Vec<i16> = Vec::new();
+    let mut n = 0u64;
+    for &(secs, loud) in pattern {
+        for _ in 0..(secs * f64::from(rate)) as usize {
+            let t = n as f64 / f64::from(rate);
+            let noise = ((n.wrapping_mul(2_654_435_761) >> 7) % 1000) as f64 / 1000.0 - 0.5;
+            let voice = if loud { 0.3 * (t * 220.0 * std::f64::consts::TAU).sin() * (1.0 + 0.3 * (t * 3.0 * std::f64::consts::TAU).sin()) } else { 0.0 };
+            samples.push(((voice + 0.002 * noise) * 32767.0) as i16);
+            n += 1;
+        }
+    }
+    let data = (samples.len() * 2) as u32;
+    let mut b = Vec::with_capacity(44 + data as usize);
+    b.extend_from_slice(b"RIFF");
+    b.extend_from_slice(&(36 + data).to_le_bytes());
+    b.extend_from_slice(b"WAVEfmt ");
+    b.extend_from_slice(&16u32.to_le_bytes());
+    b.extend_from_slice(&1u16.to_le_bytes()); // PCM
+    b.extend_from_slice(&1u16.to_le_bytes()); // mono
+    b.extend_from_slice(&rate.to_le_bytes());
+    b.extend_from_slice(&(rate * 2).to_le_bytes());
+    b.extend_from_slice(&2u16.to_le_bytes());
+    b.extend_from_slice(&16u16.to_le_bytes());
+    b.extend_from_slice(b"data");
+    b.extend_from_slice(&data.to_le_bytes());
+    for s in samples {
+        b.extend_from_slice(&s.to_le_bytes());
+    }
+    std::fs::write(path, b).unwrap_or_else(|e| panic!("{e}"));
+}
+
+/// Talk 0–2 s, pause 2–3.5 s, talk 3.5–6.5 s, a breath, talk 6.6–7.6 s, then 1.9 s of nothing.
+const TALK: [(f64, bool); 6] = [(2.0, true), (1.5, false), (3.0, true), (0.1, false), (1.0, true), (1.9, false)];
+
+impl SessionEditor {
+    /// A fresh 1280x720 30 fps timeline like a talking-head recording: a picture on V1 and the
+    /// recording on A1, both 9.5 s.
+    fn talking_head(name: &str) -> Self {
+        let mut s = Session::default();
+        s.execute("file.newSequence", json!({"name": "Talk", "width": 1280, "height": 720, "fps": 30.0})).unwrap_or_else(|e| panic!("{e}"));
+        let dir = std::env::temp_dir().join(format!("jbd-engine-test-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::create_dir_all(&dir);
+        let ed = SessionEditor { s: Mutex::new(s), dir };
+        let wav = ed.dir.join("talk.wav");
+        write_wav(&wav, &TALK);
+        let png = ed.dir.join("face.png");
+        image::RgbaImage::from_pixel(64, 36, image::Rgba([90, 120, 160, 255])).save(&png).unwrap_or_else(|e| panic!("{e}"));
+        let items = ed.run("file.import", json!({"paths": [png.to_string_lossy(), wav.to_string_lossy()]}));
+        let (pic, rec) = (items["items"][0].as_u64().unwrap_or(0), items["items"][1].as_u64().unwrap_or(0));
+        ed.run("timeline.place", json!({"item": pic, "seconds": 0.0, "track": "V1", "duration": (9.5 * T) as i64}));
+        ed.run("timeline.place", json!({"item": rec, "seconds": 0.0, "track": "A1"}));
+        ed
+    }
+
+    /// (clip, start s, end s) on audio track `track` (0 = A1).
+    fn audio(&self, track: usize) -> Vec<(u64, f64, f64)> {
+        let seq = self.run("sequence.inspect", json!({}));
+        seq["audio"][track]["items"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|c| (c["clip"].as_u64().unwrap_or(0), c["start"].as_f64().unwrap_or(0.0) / T, c["end"].as_f64().unwrap_or(0.0) / T))
+            .collect()
+    }
+
+    fn duration(&self) -> f64 {
+        self.run("sequence.inspect", json!({}))["duration"].as_f64().unwrap_or(0.0) / T
+    }
+
+    fn undo_depth(&self) -> usize {
+        lock(&self.s).history.undo.len()
+    }
+}
+
+/// Run a tool with the person answering its review card (`yes`, or Skip). Returns what the tool
+/// said and the preview the card showed.
+fn run_reviewed(ed: &SessionEditor, name: &str, args: Value, mode: Mode, yes: bool) -> (tools::Outcome, Option<crate::EditPreview>) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    let shared = Mutex::new(Shared::default());
+    let shown = Mutex::new(None);
+    let done = AtomicBool::new(false);
+    let cat = catalogue();
+    std::thread::scope(|sc| {
+        sc.spawn(|| {
+            while !done.load(Ordering::Relaxed) {
+                if let Some(a) = lock(&shared).ask.as_mut().filter(|a| a.answer.is_none()) {
+                    *lock(&shown) = Some(a.preview.clone());
+                    a.answer = Some(yes);
+                }
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+        });
+        let repaint = || {};
+        let ctx = Ctx {
+            editor: ed,
+            model: &FakeAi,
+            shared: &shared,
+            cancel: &Cancel::default(),
+            mode,
+            catalogue: &cat,
+            video_model: "v",
+            repaint: &repaint,
+            spent: std::cell::Cell::new(0),
+            sound: Sound::Auto,
+            external: None,
+            seen: Default::default(),
+        };
+        let step = tools::begin_step(&shared, name, &args);
+        let out = tools::run(&ctx, step, name, &args);
+        done.store(true, Ordering::Relaxed);
+        (out, lock(&shown).take().flatten())
+    })
+}
+
+fn silences(ed: &SessionEditor) -> Vec<(f64, f64)> {
+    let v = ed.call("jbd.analyze", json!({"what": ["silences"]})).unwrap_or_else(|e| panic!("{e}"));
+    v["silences"].as_array().into_iter().flatten().map(|p| (p[0].as_f64().unwrap_or(0.0), p[1].as_f64().unwrap_or(0.0))).collect()
+}
+
+#[test]
+fn read_footage_finds_the_pauses_in_a_real_recording() {
+    let ed = SessionEditor::talking_head("silences");
+    let s = silences(&ed);
+    // the 1.5 s pause (padded inside) and the quiet tail (to the very end); the 0.1 s breath
+    // between two phrases is not a pause
+    assert_eq!(s.len(), 2, "{s:?}");
+    assert!((s[0].0 - 2.12).abs() < 0.08 && (s[0].1 - 3.38).abs() < 0.08, "{s:?}");
+    assert!((s[1].0 - 7.72).abs() < 0.08 && (s[1].1 - 9.5).abs() < 0.05, "{s:?}");
+    // and the model reads them as ranges it can paste into a cut
+    let out = run_tool(&ed, "read_footage", json!({"what": ["silences"]}));
+    assert!(out.ok, "{}", out.text);
+    assert!(out.text.contains("SILENCES (2 pauses"), "{}", out.text);
+}
+
+#[test]
+fn cutting_the_silences_shortens_picture_and_sound_together_and_undoes_cleanly() {
+    let ed = SessionEditor::talking_head("cut");
+    let before = ed.run("sequence.inspect", json!({}));
+    let depth = ed.undo_depth();
+    let s = silences(&ed);
+    let removed: f64 = s.iter().map(|(a, b)| b - a).sum();
+    let ranges: Vec<Value> = s.iter().map(|(a, b)| json!([a, b])).collect();
+    let (out, preview) =
+        run_reviewed(&ed, "edit_timeline", json!({"summary": "Cut the pauses", "operations": [{"op": "cut", "ranges": ranges}]}), Mode::AutoEdits, true);
+    assert!(out.ok, "{}", out.text);
+    // the person saw it first: what goes, and how long it will be
+    let p = preview.unwrap_or_else(|| panic!("a cut is reviewed before it happens"));
+    assert!((p.before - 9.5).abs() < 0.05 && (p.after - (9.5 - removed)).abs() < 0.05, "{p:?}");
+    assert_eq!(p.removed.len(), 2);
+    // it happened on the timeline: shorter by what was cut (to the frame), picture and sound alike
+    let d = ed.duration();
+    assert!((d - (9.5 - removed)).abs() < 0.07, "now {d}, expected {}\n{}", 9.5 - removed, out.text);
+    let (v, a) = (ed.clips(0), ed.audio(0));
+    assert_eq!(v.len(), 2, "the picture is cut where the pause was: {v:?}");
+    assert_eq!(a.len(), 2, "and so is the sound: {a:?}");
+    for (pv, pa) in v.iter().zip(&a) {
+        assert!((pv.2 - pa.1).abs() < 1e-6 && (pv.3 - pa.2).abs() < 1e-6, "picture and sound stay in sync: {v:?} {a:?}");
+    }
+    assert!((v[1].2 - v[0].3).abs() < 1e-6, "no gap left where the pause was: {v:?}");
+    // the pauses really are gone: what's left has no silence worth cutting
+    assert!(silences(&ed).iter().all(|(a, b)| b - a < 0.5), "{:?}", silences(&ed));
+    // every step it made is an ordinary undo step; undoing them gives back the exact timeline
+    let steps = ed.undo_depth() - depth;
+    assert!(steps > 0);
+    for _ in 0..steps {
+        lock(&ed.s).undo();
+    }
+    let back = ed.run("sequence.inspect", json!({}));
+    assert_eq!(back["duration"], before["duration"]);
+    assert_eq!(back["video"], before["video"], "picture restored");
+    assert_eq!(back["audio"], before["audio"], "sound restored");
+}
+
+#[test]
+fn skipping_the_preview_or_plan_mode_changes_nothing() {
+    let ed = SessionEditor::talking_head("skip");
+    let before = ed.run("sequence.inspect", json!({}));
+    let plan = json!({"summary": "Cut the slow start", "operations": [{"op": "cut", "ranges": [[0, 1.5]]}]});
+    let (out, preview) = run_reviewed(&ed, "edit_timeline", plan.clone(), Mode::AutoEdits, false);
+    assert!(!out.ok && out.text.contains("chose not to apply"), "{}", out.text);
+    assert!(preview.is_some());
+    assert_eq!(ed.run("sequence.inspect", json!({}))["video"], before["video"]);
+    // Plan mode: the plan comes back as text to propose; nothing is touched
+    let (out, preview) = run_reviewed(&ed, "edit_timeline", plan, Mode::Plan, true);
+    assert!(out.text.contains("This plan would") && out.text.contains("Cut 1 range (1.5 s)"), "{}", out.text);
+    assert!(preview.is_none());
+    assert_eq!(ed.run("sequence.inspect", json!({}))["audio"], before["audio"]);
+}
+
+#[test]
+fn a_highlight_with_captions_music_and_levels_lands_on_the_timeline() {
+    let ed = SessionEditor::talking_head("highlight");
+    // speech recognition on this computer, faked with a fixed transcript of the recording
+    let w = |text: &str, a: f64, b: f64| filmcraft_engine::project::Word {
+        text: text.into(),
+        start: filmcraft_engine::time::Tick::from_seconds_f64(a),
+        end: filmcraft_engine::time::Tick::from_seconds_f64(b),
+        speaker: None,
+        confidence: 0.9,
+    };
+    let words =
+        vec![w("Hi,", 0.1, 0.6), w("I'm", 0.7, 1.0), w("Ansh.", 1.1, 1.9), w("Today", 3.6, 4.2), w("we", 4.3, 4.6), w("edit.", 4.7, 6.3), w("Bye.", 6.7, 7.5)];
+    lock(&ed.s).transcriber = Some(std::sync::Arc::new(filmcraft_speech::FixedTranscriber {
+        transcript: filmcraft_engine::project::Transcript { language: "en".into(), source: String::new(), speakers: vec![], words },
+        id: "fixed".into(),
+    }));
+    let out = run_tool(&ed, "read_footage", json!({"what": ["transcript"]}));
+    assert!(out.ok, "{}", out.text);
+    assert!(out.text.contains("transcribed just now") && out.text.contains("Hi, I'm Ansh.") && out.text.contains("Today we edit."), "{}", out.text);
+    // music the person imported (a steady bed)
+    let song = ed.dir.join("song.wav");
+    write_wav(&song, &[(12.0, true)]);
+    let music = ed.run("file.import", json!({"paths": [song.to_string_lossy()]}))["items"][0].as_u64().unwrap_or(0);
+    let tracks = ed.run("sequence.inspect", json!({}))["audio"].as_array().map_or(0, Vec::len);
+    let (out, _) = run_reviewed(
+        &ed,
+        "edit_timeline",
+        json!({"summary": "A 5-second highlight", "operations": [
+            {"op": "keep", "ranges": [[0.0, 2.0], [3.5, 6.5]]},
+            {"op": "transition", "clips": "all", "frames": 6},
+            {"op": "volume", "track": "A1", "db": -3},
+            {"op": "music", "item": music, "db": -18, "duck": true},
+            {"op": "captions"}
+        ]}),
+        Mode::AutoEdits,
+        true,
+    );
+    assert!(out.ok, "{}", out.text);
+    assert!((ed.duration() - 5.0).abs() < 0.05, "kept 2 s + 3 s: {}\n{}", ed.duration(), out.text);
+    let seq = ed.run("sequence.inspect", json!({}));
+    // the cut between the two moments got the dissolve
+    let v1 = &seq["video"][0];
+    assert!(v1["transitions"].as_array().is_some_and(|t| !t.is_empty()), "a transition at the cut: {v1}");
+    // the speech is at -3 dB
+    assert!(seq["audio"][0]["items"].as_array().into_iter().flatten().all(|c| (c["gainDb"].as_f64().unwrap_or(0.0) + 3.0).abs() < 1e-6), "{}", seq["audio"][0]);
+    // the music sits on a new track of its own, cut where the picture ends, at -18 dB
+    let a = seq["audio"].as_array().cloned().unwrap_or_default();
+    assert_eq!(a.len(), tracks + 1, "a music track was added");
+    let bed: Vec<&Value> = a.last().and_then(|t| t["items"].as_array()).into_iter().flatten().collect();
+    assert_eq!(bed.len(), 1, "one music clip: {bed:?}");
+    assert!((bed[0]["end"].as_f64().unwrap_or(0.0) / T - 5.0).abs() < 0.05, "ends with the picture: {}", bed[0]);
+    assert!((bed[0]["gainDb"].as_f64().unwrap_or(0.0) + 18.0).abs() < 1e-6);
+    // captions from what is said, timed to the edit
+    let caps = ed.run("captions.list", json!({}));
+    assert!(caps.to_string().contains("Ansh") && caps.to_string().contains("Today"), "{caps}");
+}
+
+#[test]
+fn trim_order_and_delete_reshape_the_demo_edit() {
+    let ed = SessionEditor::demo("reshape");
+    let v = ed.clips(0);
+    assert!(v.len() >= 3, "the demo has clips: {v:?}");
+    let (a, b, c) = (v[0], v[1], v[2]);
+    let len_b = b.3 - b.2;
+    let (out, _) = run_reviewed(
+        &ed,
+        "edit_timeline",
+        json!({"summary": "Tighten", "operations": [{"op": "trim", "clip": b.0, "head_seconds": 1.0}]}),
+        Mode::AutoEdits,
+        true,
+    );
+    assert!(out.ok, "{}", out.text);
+    let after = ed.clips(0);
+    // what's left of b starts where b started (the result names its id if it changed)
+    let nb = after.iter().find(|x| (x.2 - b.2).abs() < 0.05).copied().unwrap_or_else(|| panic!("clip b is still there: {after:?}"));
+    assert!(((nb.3 - nb.2) - (len_b - 1.0)).abs() < 0.05, "a second off its start: {nb:?}");
+    assert!(nb.0 == b.0 || out.text.contains(&format!("now clip {}", nb.0)), "the model is told the new id: {}", out.text);
+    let b = nb;
+    let nc = after.iter().find(|x| x.0 == c.0).copied().unwrap_or_else(|| panic!("clip c"));
+    assert!((nc.2 - (c.2 - 1.0)).abs() < 0.05, "and the clips after it moved up: {nc:?}");
+    // swap the first two
+    let (out, _) = run_reviewed(&ed, "edit_timeline", json!({"summary": "Swap", "operations": [{"op": "order", "clips": [b.0, a.0]}]}), Mode::AutoEdits, true);
+    assert!(out.ok, "{}", out.text);
+    let after = ed.clips(0);
+    let na = after.iter().find(|x| x.0 == a.0).copied().unwrap_or(a);
+    let nb = after.iter().find(|x| x.0 == b.0).copied().unwrap_or(b);
+    assert!(nb.2 < na.2 && (na.2 - nb.3).abs() < 0.05 && nb.2.abs() < 0.05, "b first, then a, back to back: {after:?}");
+    // remove the third, closing the gap
+    let n = ed.clips(0).len();
+    let (out, _) = run_reviewed(&ed, "edit_timeline", json!({"summary": "Drop one", "operations": [{"op": "delete", "clips": [c.0]}]}), Mode::AutoEdits, true);
+    assert!(out.ok, "{}", out.text);
+    let after = ed.clips(0);
+    assert_eq!(after.len(), n - 1);
+    let mut sorted = after.clone();
+    sorted.sort_by(|x, y| x.2.total_cmp(&y.2));
+    for w in sorted.windows(2) {
+        assert!(w[1].2 - w[0].3 < 0.05, "no gap left: {sorted:?}");
+    }
+}
+
+/// Real camera-like files (H.264 picture, AAC sound, decoded by JBD's own decoders), when they
+/// are there. Make them with ffmpeg as the release checklist says (docs/jbd/J2-DIRECTOR.md,
+/// "Testing on real clips"); media is never committed, so without them this test only notes it.
+#[test]
+fn real_clips_are_read_cut_in_sync_and_undone() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/fixtures/director");
+    let (a, b, music) = (dir.join("talk-a.mp4"), dir.join("talk-b.mp4"), dir.join("beat-120.m4a"));
+    if !(a.exists() && b.exists() && music.exists()) {
+        eprintln!("no real clips in {}: skipped", dir.display());
+        return;
+    }
+    let mut s = Session::default();
+    s.execute("file.newSequence", json!({"name": "Real", "width": 1280, "height": 720, "fps": 30.0})).unwrap_or_else(|e| panic!("{e}"));
+    let tmp = std::env::temp_dir().join(format!("jbd-engine-test-real-{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&tmp);
+    let ed = SessionEditor { s: Mutex::new(s), dir: tmp };
+    let items = ed.run("file.import", json!({"paths": [a.to_string_lossy(), b.to_string_lossy(), music.to_string_lossy()]}));
+    let ids: Vec<u64> = items["items"].as_array().into_iter().flatten().filter_map(Value::as_u64).collect();
+    assert_eq!(ids.len(), 3, "{items}");
+    // the person's clips, back to back, picture and sound linked
+    let out = run_tool(&ed, "assemble", json!({"clips": [{"item": ids[0]}, {"item": ids[1]}], "start_at_seconds": 0.0}));
+    assert!(out.ok, "{}", out.text);
+    assert!((ed.duration() - 16.5).abs() < 0.1, "9.5 s + 7 s: {}", ed.duration());
+    // A: talk 0-2, 3.5-6.5, 6.6-7.6, quiet to 9.5. B (at 9.5): quiet 0-1.2, talk to 3, quiet 3-4.4, talk to 7
+    let s = silences(&ed);
+    let near = |x: f64, y: f64| s.iter().any(|(p, q)| (p - x).abs() < 0.12 && (q - y).abs() < 0.12);
+    assert!(near(2.12, 3.38) && near(7.72, 10.58) && near(12.62, 13.78), "pauses in real AAC audio: {s:?}");
+    // the music: a steady 120 bpm
+    let placed = ed.run("sequence.addTracks", json!({"video": 0, "audio": 1}));
+    let _ = placed;
+    let m = ed.run("timeline.place", json!({"item": ids[2], "seconds": 0.0, "track": "A2"}));
+    let mclip = m["clips"][0].as_u64().unwrap_or(0);
+    let beats = ed.call("jbd.analyze", json!({"what": ["beats"], "clips": [mclip]})).unwrap_or_else(|e| panic!("{e}"));
+    let bpm = beats["beats"][0]["bpm"].as_f64().unwrap_or(0.0);
+    assert!((bpm - 120.0).abs() < 3.0 || (bpm - 240.0).abs() < 6.0 || (bpm - 60.0).abs() < 2.0, "tempo of the music: {beats}");
+    ed.run("edit.clear", json!({"clips": [mclip]}));
+    // cut the pauses through the Director's own tool, then undo it all
+    let before = ed.run("sequence.inspect", json!({}));
+    let depth = ed.undo_depth();
+    let ranges: Vec<Value> = s.iter().map(|(p, q)| json!([p, q])).collect();
+    let removed: f64 = s.iter().map(|(p, q)| q - p).sum();
+    let (out, _) =
+        run_reviewed(&ed, "edit_timeline", json!({"summary": "Cut the pauses", "operations": [{"op": "cut", "ranges": ranges}]}), Mode::AutoEdits, true);
+    assert!(out.ok, "{}", out.text);
+    assert!((ed.duration() - (16.5 - removed)).abs() < 0.1, "{} vs {}", ed.duration(), 16.5 - removed);
+    let (v, au) = (ed.clips(0), ed.audio(0));
+    assert_eq!(v.len(), au.len(), "every picture piece has its sound: {v:?} {au:?}");
+    for (pv, pa) in v.iter().zip(&au) {
+        assert!((pv.2 - pa.1).abs() < 1e-6 && (pv.3 - pa.2).abs() < 1e-6, "in sync: {v:?} {au:?}");
+    }
+    for _ in 0..ed.undo_depth() - depth {
+        lock(&ed.s).undo();
+    }
+    let back = ed.run("sequence.inspect", json!({}));
+    assert_eq!(back["video"], before["video"]);
+    assert_eq!(back["audio"], before["audio"]);
 }

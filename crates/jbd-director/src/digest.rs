@@ -38,6 +38,16 @@ pub fn digest(project: Option<&Value>, sequence: Option<&Value>) -> String {
         if let Some(root) = p.get("root") {
             collect_items(root, "", &mut items);
         }
+        // media the person imported but hasn't put on the timeline: "make a highlight from
+        // these clips" means these too
+        let used = used_items(sequence);
+        for line in items.iter_mut() {
+            let id = line.trim_start().strip_prefix("item ").and_then(|r| r.split(':').next()).and_then(|n| n.parse::<u64>().ok());
+            if sequence.is_some_and(|s| s.get("id").is_some()) && id.is_some_and(|i| !used.contains(&i)) && !line.contains("(Sequence") {
+                line.truncate(line.trim_end().len());
+                line.push_str(" (not on the timeline)\n");
+            }
+        }
         if items.is_empty() {
             out.push_str("  (no media yet)\n");
         }
@@ -110,6 +120,35 @@ fn sequence_part(s: &Value, out: &mut String) {
     if !any {
         out.push_str("  The timeline has no clips yet.\n");
     }
+}
+
+/// Media items used by clips on the open timeline.
+fn used_items(sequence: Option<&Value>) -> std::collections::BTreeSet<u64> {
+    let mut used = std::collections::BTreeSet::new();
+    for key in ["video", "audio"] {
+        for t in sequence.and_then(|s| s.get(key)).and_then(Value::as_array).into_iter().flatten() {
+            used.extend(t.get("items").and_then(Value::as_array).into_iter().flatten().filter_map(|c| c.get("item").and_then(Value::as_u64)));
+        }
+    }
+    used
+}
+
+/// Which media has a transcript, from `transcript.inspect`'s `items`: "Transcripts: item 5 (812
+/// words, en)". Tells the model whether read_footage will have to transcribe first.
+pub fn transcripts_line(inspect: Option<&Value>) -> String {
+    let items: Vec<String> = inspect
+        .and_then(|v| v.get("items"))
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .take(30)
+        .filter_map(|i| {
+            let words = i.get("words").and_then(Value::as_u64)?;
+            let lang = i.get("language").and_then(Value::as_str).filter(|l| !l.is_empty()).map(|l| format!(", {l}")).unwrap_or_default();
+            Some(format!("item {} ({words} words{lang})", i.get("item")?.as_u64()?))
+        })
+        .collect();
+    if items.is_empty() { "Transcripts: none yet (read_footage with transcript makes them).\n".into() } else { format!("Transcripts: {}.\n", items.join(", ")) }
 }
 
 fn collect_items(node: &Value, bin: &str, out: &mut Vec<String>) {

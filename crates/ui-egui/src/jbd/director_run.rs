@@ -334,7 +334,10 @@ impl jbd_director::Editor for ChannelEditor {
         let (req, reply) = ControlRequest::new(method, params);
         self.tx.send(req).map_err(|_| "JBD is closing".to_string())?;
         self.ctx.request_repaint();
-        let v = reply.recv_timeout(std::time::Duration::from_secs(120)).map_err(|_| "the editor didn't answer in time".to_string())?;
+        // reading footage decodes whole clips (and transcribing a long one takes minutes); Stop
+        // still ends it early, because the worker checks it between pieces
+        let wait = if matches!(method, "jbd.analyze" | "jbd.transcribe") { 1800 } else { 120 };
+        let v = reply.recv_timeout(std::time::Duration::from_secs(wait)).map_err(|_| "the editor didn't answer in time".to_string())?;
         if v.get("ok").and_then(Value::as_bool) == Some(true) {
             Ok(v.get("result").cloned().unwrap_or(Value::Null))
         } else {
@@ -557,6 +560,11 @@ pub fn drain(app: &mut FilmcraftApp, ctx: &egui::Context) {
                 // Rendered and encoded on a thread of its own, which answers the request itself:
                 // the UI never waits for it.
                 render_frames(app, req);
+                continue;
+            } else if req.method == "jbd.analyze" || req.method == "jbd.transcribe" {
+                // read-only: silences, beats, shot changes, speech (read_footage). Decoding a long
+                // clip takes seconds, so it runs on its own thread, which answers the request
+                read_footage(app, req);
                 continue;
             } else if req.method == "jbd.mediaPath" {
                 // read-only: where a media item's file is (regenerate_clip reads its recipe)
@@ -820,6 +828,47 @@ pub fn render_frames(app: &FilmcraftApp, req: ControlRequest) {
     if let Err(e) = worker {
         // the request moved into the closure that never ran: the agent's wait times out
         log::warn!("couldn't start the look thread: {e}");
+    }
+}
+
+/// Answer `jbd.analyze` (silences, beats, shot changes) or `jbd.transcribe` (speech to text for
+/// media without a transcript) on a worker thread, from a snapshot of the project: the editor
+/// keeps running, and Stop ends the work between pieces. Nothing here changes the project; the
+/// Director stores transcripts itself with `transcript.set`, an ordinary undoable step.
+fn read_footage(app: &FilmcraftApp, req: ControlRequest) {
+    let s = &app.session;
+    let Some(seq) = s.state.active_sequence else {
+        let _ = req.reply.send(json!({"ok": false, "error": "no timeline is open"}));
+        return;
+    };
+    let project = s.project.clone();
+    let provider = s.media.provider(project.clone(), s.services.clone());
+    let cancel = app.jbd.director.cancel.clone();
+    let ma = &s.prefs.media_analysis;
+    let language = (!ma.language_auto_detect).then(|| ma.default_language.clone()).filter(|l| !l.is_empty() && l != "auto");
+    let (installed, model) = (s.transcriber.clone(), ma.whisper_model.clone());
+    let worker = std::thread::Builder::new().name("jbd-director-footage".into()).spawn(move || {
+        let stop = || cancel.stopped();
+        let done = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            if req.method == "jbd.analyze" {
+                jbd_director::footage::analyze(&project, seq, &provider, &req.params, &stop)
+            } else {
+                let items: Vec<u64> =
+                    req.params.get("items").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_u64).take(40).collect()).unwrap_or_default();
+                jbd_director::footage::transcriber(installed, &model)
+                    .and_then(|t| jbd_director::footage::transcribe(&project, &provider, &items, t.as_ref(), language, &stop))
+                    .map(|list| json!({"transcripts": list.into_iter().map(|(item, t)| json!({"item": item, "transcript": t})).collect::<Vec<_>>()}))
+            }
+        }));
+        let answer = match done {
+            Ok(Ok(v)) => json!({"ok": true, "result": v}),
+            Ok(Err(e)) => json!({"ok": false, "error": e}),
+            Err(_) => json!({"ok": false, "error": "reading the footage failed"}),
+        };
+        let _ = req.reply.send(answer);
+    });
+    if let Err(e) = worker {
+        log::warn!("couldn't start the footage thread: {e}");
     }
 }
 

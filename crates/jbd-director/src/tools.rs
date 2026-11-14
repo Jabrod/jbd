@@ -74,6 +74,37 @@ pub fn definitions() -> Vec<Value> {
     let f = |name: &str, description: &str, parameters: Value| json!({"type": "function", "function": {"name": name, "description": description, "parameters": parameters}});
     vec![
         f(
+            "read_footage",
+            "Understand the person's own clips on the timeline before editing them. All times are TIMELINE seconds. `transcript`: what is said, one timed line per phrase (clips without a transcript are transcribed first, on this computer; it can take a minute for long clips). `silences`: pauses where no sound clip makes a sound, already padded so each can be cut as it is ([start, end] pairs to paste into an edit_timeline cut). `beats`: the beat times and tempo of music clips. `scenes`: where the picture cuts from one shot to another inside video clips. Ask only for what the request needs.",
+            json!({"type": "object", "properties": {
+                "what": {"type": "array", "items": {"type": "string", "enum": ["transcript", "silences", "beats", "scenes"]}},
+                "clips": {"type": "array", "items": {"type": "integer"}, "description": "Limit it to these clip ids (default: the whole timeline)."},
+                "from_seconds": {"type": "number", "description": "Transcript: only from this timeline time."},
+                "to_seconds": {"type": "number", "description": "Transcript: only up to this timeline time."},
+                "min_silence_seconds": {"type": "number", "description": "Shortest pause to report (default 0.5; 0.3 for a tight, fast edit, 1.0 to keep natural pauses)."}
+            }, "required": ["what"]}),
+        ),
+        f(
+            "edit_timeline",
+            "EDIT THE PERSON'S FOOTAGE: one plan of real timeline edits, shown to the person as a before/after preview, then applied with the editor's own edit commands (undoable, visible on the timeline). Put every change for the request in ONE call. Operations run in order; each uses the timeline as it is when it runs (inside one cut or keep every range refers to the same timeline). Times are timeline seconds, clip ids from PROJECT NOW or the last result. Operations:\n\
+- {\"op\":\"cut\",\"ranges\":[[start,end],...]}: remove these ranges from every track and close the gaps (silences, ums, a slow intro, a mistake).\n\
+- {\"op\":\"keep\",\"ranges\":[[start,end],...]}: keep only these ranges in timeline order and cut the rest (a highlight, a 30-second version).\n\
+- {\"op\":\"split\",\"at\":[seconds,...]}: cut every track at these times.\n\
+- {\"op\":\"trim\",\"clip\":id,\"head_seconds\":n,\"tail_seconds\":n}: take time off a clip's start and/or end, gap closed.\n\
+- {\"op\":\"delete\",\"clips\":[ids],\"ripple\":true}: remove clips with their sound (ripple false leaves the gap).\n\
+- {\"op\":\"order\",\"clips\":[ids]}: put these clips of one track back to back in this order.\n\
+- {\"op\":\"transition\",\"clips\":[ids] or \"all\",\"effect\":\"cross_dissolve\",\"frames\":12,\"audio\":true}: a transition at the cut before each clip (\"all\": every cut on V1).\n\
+- {\"op\":\"title\",\"text\":str,\"start_seconds\":n,\"duration_seconds\":n,\"position\":\"lower_third\"}: on-screen text (same options as add_title).\n\
+- {\"op\":\"captions\",\"max_chars\":32,\"lines\":1}: captions from what is said (read_footage transcript first).\n\
+- {\"op\":\"volume\",\"clips\":[ids] or \"track\":\"A2\",\"db\":-6}: set the level of clips (a video clip means its sound).\n\
+- {\"op\":\"music\",\"item\":id,\"db\":-18,\"duck\":true,\"fade_seconds\":1.5}: a music item under the whole edit on its own track, cut at the end, faded, dipping under speech.\n\
+- {\"op\":\"speed\",\"clip\":id,\"percent\":150}: speed a clip up or down, gap closed.",
+            json!({"type": "object", "properties": {
+                "summary": {"type": "string", "description": "One short line the person reads on the preview, e.g. \"Cut 14 pauses and the slow intro\"."},
+                "operations": {"type": "array", "items": {"type": "object"}}
+            }, "required": ["summary", "operations"]}),
+        ),
+        f(
             "list_commands",
             "Search JBD's editor commands. Returns `id — label — params` lines. Use it to find the command for a job before running it.",
             json!({"type": "object", "properties": {"filter": {"type": "string", "description": "Words to match in the id or label, e.g. \"razor\", \"effect\", \"caption\", \"marker\". Empty lists everything."}}}),
@@ -343,6 +374,14 @@ pub fn title(name: &str, args: &Value) -> String {
         "find_video" => format!("Found stock video: {}", clip(s("query"), 60)),
         "import_media" | "import_image" => "Imported media".into(),
         "todo_write" => "Updated the plan".into(),
+        "read_footage" => {
+            let what: Vec<&str> = args.get("what").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_str).collect()).unwrap_or_default();
+            if what.is_empty() { "Read the footage".into() } else { format!("Read the footage: {}", what.join(", ")) }
+        }
+        "edit_timeline" => match s("summary") {
+            "" => format!("Edit the timeline ({} changes)", args.get("operations").and_then(Value::as_array).map_or(0, Vec::len)),
+            summary => clip(summary, 70),
+        },
         other => other.to_string(),
     }
 }
@@ -388,7 +427,9 @@ pub enum Kind {
 /// The kind of a tool call.
 pub fn kind(name: &str, args: &Value) -> Kind {
     match name {
-        "list_commands" | "inspect" | "look" | "web_search" | "read_webpage" | "find_images" | "find_music" | "find_video" | "todo_write" => Kind::Read,
+        "list_commands" | "inspect" | "look" | "web_search" | "read_webpage" | "find_images" | "find_music" | "find_video" | "todo_write" | "read_footage" => {
+            Kind::Read
+        }
         "generate_video" | "generate_shots" | "regenerate_clip" | "voiceover" => Kind::Spend,
         "run_command" => match args.get("id").and_then(Value::as_str) {
             Some(id) if is_query(id) => Kind::Read,
@@ -411,12 +452,18 @@ pub fn gate(ctx: &Ctx, step: u64, name: &str, args: &Value) -> Option<Outcome> {
     if k == Kind::Read {
         return None;
     }
+    if ctx.mode == Mode::Plan && name == "edit_timeline" {
+        // the plan itself is the useful answer: what it would do, for the person to approve
+        return Some(Outcome { text: crate::edits::plan_only(ctx, args), ok: false, edited: false, credits: 0 });
+    }
     if ctx.mode == Mode::Plan {
         return Some(Outcome::err(
             "Plan mode is on, so nothing can be changed, generated or sent outside JBD. Describe the step instead; the person will switch modes to run it.",
         ));
     }
     let ask_now = match k {
+        // edit_timeline asks itself, with the before/after preview
+        Kind::Edit if name == "edit_timeline" => false,
         Kind::Edit => ctx.mode == Mode::Ask,
         Kind::External => ctx.mode == Mode::Ask || !ctx.external.is_some_and(|x| x.is_trusted(name)),
         _ => false,
@@ -457,6 +504,8 @@ pub fn run(ctx: &Ctx, step: u64, name: &str, args: &Value) -> Outcome {
         "run_command" => run_command(ctx, args),
         "generate_video" | "generate_shots" => crate::production::generate_shots(ctx, step, args),
         "assemble" => crate::production::assemble(ctx, args),
+        "read_footage" => crate::footage::read_footage(ctx, args),
+        "edit_timeline" => crate::edits::edit_timeline(ctx, step, args),
         "animate" => crate::production::animate(ctx, args),
         "look" => crate::look::look(ctx, args),
         "regenerate_clip" => crate::production::regenerate_clip(ctx, step, args),
@@ -719,7 +768,12 @@ fn todo_write(ctx: &Ctx, args: &Value) -> Outcome {
 
 /// Show a permission ask and wait for the answer. False when the person says no or stops.
 pub(crate) fn ask(ctx: &Ctx, step: u64, title: &str, detail: &str, credits: u32) -> bool {
-    lock(ctx.shared).ask = Some(Ask { id: step, title: title.into(), detail: detail.into(), credits, answer: None });
+    ask_with(ctx, step, title, detail, credits, None)
+}
+
+/// [`ask`], with a before/after preview of a planned edit (`edits.rs`).
+pub(crate) fn ask_with(ctx: &Ctx, step: u64, title: &str, detail: &str, credits: u32, preview: Option<crate::EditPreview>) -> bool {
+    lock(ctx.shared).ask = Some(Ask { id: step, title: title.into(), detail: detail.into(), credits, answer: None, preview });
     (ctx.repaint)();
     loop {
         if ctx.cancel.stopped() {

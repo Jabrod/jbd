@@ -86,6 +86,10 @@ The owner's priority after 1.0. The account, the AI credits and the jabrod.com A
   (`AccountBackend::access_token`).
 - The Director tab (`jbd/director.rs`) becomes real: prompt, plan, steps, undo.
 - Recipes: remove pauses, 9:16 reel, captions (Hinglish via transliteration), cut to the beat.
+  Done in 1.2.0 for the person's own footage (remove pauses, highlights, trims, captions, music
+  under speech, cuts on the beat) through `read_footage` and `edit_timeline`, with a preview before
+  anything is cut ([J2-DIRECTOR.md](J2-DIRECTOR.md#editing-the-persons-footage-120)). Still open:
+  9:16 reframing and Hinglish captions.
 - Import projects from the first JBD.
 
 ### J3 — Understanding the footage

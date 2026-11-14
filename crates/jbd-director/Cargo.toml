@@ -12,6 +12,10 @@ workspace = true
 [dependencies]
 jbd-account = { workspace = true }
 filmcraft-engine = { workspace = true }
+# reading the person's footage (footage.rs): sound levels, beats, shot changes, speech
+filmcraft-media = { workspace = true }
+filmcraft-audio-dsp = { workspace = true }
+filmcraft-speech = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 # contact sheets for the look tool (frames the model can see)

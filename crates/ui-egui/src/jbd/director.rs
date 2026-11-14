@@ -164,6 +164,7 @@ fn pro_wall(app: &mut FilmcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         ui.add_space(10.0);
         for line in [
             "1,000 AI credits every month: thinking, video and voiceover",
+            "Edits your own clips: cuts the pauses, makes highlights, adds captions and music",
             "Generate shots with sound and add narration",
             "It checks its work on rendered frames before it reports back",
             "Pay-as-you-go when you need more",
@@ -1176,9 +1177,20 @@ fn ask_card(app: &mut FilmcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     egui::Frame::new().fill(t.field_bg).stroke(Stroke::new(1.0, style::BLUE)).corner_radius(10.0).inner_margin(10.0).show(ui, |ui| {
         ui.set_width(ui.available_width());
         ui.label(RichText::new(ask.title.as_str()).font(Tokens::semibold(12.5)).color(t.text));
-        ui.add(egui::Label::new(RichText::new(ask.detail.as_str()).size(11.5).color(t.text_dim)).truncate());
+        match &ask.preview {
+            Some(p) => edit_preview(ui, p, t),
+            None => {
+                ui.add(egui::Label::new(RichText::new(ask.detail.as_str()).size(11.5).color(t.text_dim)).truncate());
+            }
+        }
         ui.horizontal(|ui| {
-            let yes_label = if ask.credits > 0 { "Generate" } else { "Allow" };
+            let yes_label = if ask.credits > 0 {
+                "Generate"
+            } else if ask.preview.is_some() {
+                "Apply"
+            } else {
+                "Allow"
+            };
             let yes = style::small_primary_button(ui, yes_label, t);
             let no = ui.add(egui::Button::new(RichText::new("Skip").size(12.0).color(t.text_dim)).frame(false));
             app.auto.add("director.allow", yes.rect, yes_label);
@@ -1200,6 +1212,55 @@ fn ask_card(app: &mut FilmcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     if let Some(yes) = answer {
         app.jbd.director.answer(yes);
     }
+}
+
+/// The Director's planned edit of the person's footage, before it happens: today's timeline with
+/// what will be cut shaded, the timeline after it (to the same scale, so it reads shorter), and
+/// one line per change. Applying it is one undo step.
+fn edit_preview(ui: &mut egui::Ui, p: &jbd_director::EditPreview, t: &Tokens) {
+    let mmss = |s: f64| {
+        let s = s.max(0.0).round() as u64;
+        format!("{}:{:02}", s / 60, s % 60)
+    };
+    let label_w = 86.0;
+    let full = (ui.available_width() - label_w).max(60.0);
+    let scale = if p.before > 0.0 { full as f64 / p.before } else { 0.0 };
+    let strip = |ui: &mut egui::Ui, label: String, len: f64, before: bool| {
+        ui.horizontal(|ui| {
+            ui.add_sized(vec2(label_w - 6.0, 14.0), egui::Label::new(RichText::new(label).size(11.0).color(t.text_dim)));
+            let w = ((len * scale) as f32).clamp(2.0, full);
+            let (rect, _) = ui.allocate_exact_size(vec2(full, 10.0), Sense::hover());
+            let painter = ui.painter();
+            let bar = egui::Rect::from_min_size(rect.min, vec2(w, rect.height()));
+            painter.rect_filled(bar, 3.0, t.text_faint);
+            if before {
+                // what goes: shaded on today's timeline
+                for (a, b) in &p.removed {
+                    let x0 = rect.min.x + (*a * scale) as f32;
+                    let x1 = (rect.min.x + (*b * scale) as f32).max(x0 + 1.5);
+                    painter.rect_filled(egui::Rect::from_min_max(egui::pos2(x0, rect.min.y), egui::pos2(x1.min(bar.max.x), rect.max.y)), 0.0, t.danger);
+                }
+                // what's added or changed: a tick
+                for m in &p.marks {
+                    let x = rect.min.x + (*m * scale) as f32;
+                    painter.line_segment([egui::pos2(x, rect.min.y - 2.0), egui::pos2(x, rect.max.y + 2.0)], Stroke::new(1.5, style::CYAN));
+                }
+            }
+        });
+    };
+    if p.removed.is_empty() && (p.after - p.before).abs() < 0.05 {
+        strip(ui, format!("Timeline {}", mmss(p.before)), p.before, true);
+    } else {
+        strip(ui, format!("Now {}", mmss(p.before)), p.before, true);
+        strip(ui, format!("After {}", mmss(p.after)), p.after, false);
+    }
+    for line in p.lines.iter().take(8) {
+        ui.add(egui::Label::new(RichText::new(format!("·  {line}")).size(11.5).color(t.text_dim)).wrap());
+    }
+    if p.lines.len() > 8 {
+        ui.label(RichText::new(format!("and {} more changes", p.lines.len() - 8)).size(11.0).color(t.text_faint));
+    }
+    ui.label(RichText::new("You can undo it all in one step afterwards.").size(10.5).color(t.text_faint));
 }
 
 /// A pasted text waiting to be sent: "Pasted text · 23k chars", × on hover to drop it. Returns

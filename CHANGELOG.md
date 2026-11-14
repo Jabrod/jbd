@@ -2,6 +2,16 @@
 
 All notable changes to JBD, newest first. Each version is a tag (v1.1.0, …) and a release on GitHub; the same notes are at jabrod.com/jbd/changelog and in the app under Help ▸ What's New.
 
+## 1.2.0 · 13 November 2026
+
+### The Director edits your footage
+- **It edits the clips you imported.** Ask for "cut the silences", "make a 30-second version", "trim the intro, add captions and put the music under it" or "cut this to the beat", and the Director does it on your own timeline: it cuts, trims, reorders and removes clips, and adds transitions, titles, captions and sound levels. It no longer makes new video when you only asked for an edit.
+- **See the edit before it happens.** Cuts, trims, removals and reordering show up as a preview first: your timeline now with the parts that go marked, how long it will be afterwards, and a line for each change. Apply it or skip it.
+- **It listens before it cuts.** The Director reads what is said (clips without a transcript are transcribed on your computer first), finds pauses from the sound itself, and finds the beat of your music and the shot changes inside long clips.
+- **Music under your edit.** Music goes on its own track, ends with the picture, fades in and out, and gets quieter whenever someone speaks.
+- Picture and sound stay in sync on every track, and the whole request comes back with one Undo.
+- Reading long clips happens in the background, so the editor stays responsive while the Director works.
+
 ## 1.1.1 · October 2026
 
 ### JBD Pro
