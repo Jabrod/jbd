@@ -34,7 +34,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, backend: &Arc<dyn Account
     let top = rect.min.y + rect.height() * 0.30;
     let edge = 52.0;
     cube::paint(&p, pos2(cx, top), edge, cube::Pose::LOGO, cube::Reveal::ALL, 1.0);
-    p.text(pos2(cx, top + edge * 1.25), Align2::CENTER_TOP, "JBD", Tokens::display(40.0), t.text);
+    p.text(pos2(cx, top + edge * 1.25), Align2::CENTER_TOP, "Art Studio", Tokens::display(40.0), t.text);
     style::spaced(&p, pos2(cx, top + edge * 1.25 + 52.0), Align2::CENTER_TOP, "AI VIDEO EDITOR BY JABROD", Tokens::medium(11.0), t.text_dim, 3.2);
 
     let col_top = top + edge * 1.25 + 110.0;
@@ -44,7 +44,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, backend: &Arc<dyn Account
             cube::paint_loader(&p, pos2(cx, col_top + 14.0), 26.0, ctx.input(|i| i.time));
             ctx.request_repaint();
             p.text(pos2(cx, col_top + 40.0), Align2::CENTER_TOP, "Finish signing in in your browser", Tokens::medium(13.0), t.text);
-            p.text(pos2(cx, col_top + 62.0), Align2::CENTER_TOP, "JBD continues on its own when you're done.", Tokens::ui(12.0), t.text_dim);
+            p.text(pos2(cx, col_top + 62.0), Align2::CENTER_TOP, "Art Studio continues on its own when you're done.", Tokens::ui(12.0), t.text_dim);
             let row = col_top + 92.0;
             let cancel = Rect::from_min_size(pos2(cx - 104.0, row), vec2(100.0, 30.0));
             let copy = Rect::from_min_size(pos2(cx + 4.0, row), vec2(100.0, 30.0));
@@ -76,7 +76,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, backend: &Arc<dyn Account
             if let Some(msg) = &status.message {
                 y += style::centered_paragraph(&p, pos2(cx, y), msg, Tokens::ui(12.0), t.danger, width) + 10.0;
             }
-            let note = "Opens jabrod.com in your browser. Your account is free, and new accounts get JBD Pro free for 7 days.";
+            let note = "Opens jabrod.com in your browser. Your account is free, and new accounts get Pro free for 7 days.";
             style::centered_paragraph(&p, pos2(cx, y), note, Tokens::ui(11.5), t.text_faint, width);
         }
     }

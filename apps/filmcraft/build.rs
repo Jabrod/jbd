@@ -7,7 +7,7 @@
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=../../assets/jbd/jbd.ico");
+    println!("cargo:rerun-if-changed=../../assets/jbd/art-studio.ico");
     println!("cargo:rerun-if-env-changed=FILMCRAFT_REQUIRE_WINRES");
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {
         return;
@@ -19,9 +19,9 @@ fn main() {
 mod windows {
     pub fn embed_resources() {
         let mut res = winresource::WindowsResource::new();
-        res.set_icon("../../assets/jbd/jbd.ico")
-            .set("ProductName", "JBD")
-            .set("FileDescription", "JBD - AI video editor by Jabrod")
+        res.set_icon("../../assets/jbd/art-studio.ico")
+            .set("ProductName", "Art Studio")
+            .set("FileDescription", "Art Studio by Jabrod")
             .set("CompanyName", "Jabrod")
             .set("LegalCopyright", "Copyright (c) Jabrod. Based on FilmCraft (MIT OR Apache-2.0).")
             .set("OriginalFilename", "jbd.exe")

@@ -1,0 +1,8 @@
+asset:        art-studio.ico
+title:        Art Studio app icon, Windows .ico (16-256 px)
+author:       Jabrod (Anshuman), for Art Studio
+source:       original work (the Jabrod mark in cream #f3eee2 on #0a090c, made from assets of jabrod.com)
+license:      LicenseRef-Jabrod-Trademark; the Jabrod and Art Studio names and marks are trademarks of Jabrod, not open source, not covered by MIT OR Apache-2.0
+license-file: assets/jbd/LICENSE-brand.txt
+added:        2026-11-19
+notes:        Explorer, Start menu and installer icon (apps/filmcraft/build.rs, jbd.nsi).

@@ -29,7 +29,7 @@ pub fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
     let mut open = true;
     match d {
         Dialog::About => {
-            egui::Window::new("About JBD")
+            egui::Window::new("About Art Studio")
                 .open(&mut open)
                 .collapsible(false)
                 .resizable(false)
@@ -269,7 +269,7 @@ fn about(app: &mut FilmcraftApp, ui: &mut egui::Ui) {
             links::open(ui.ctx(), url);
         }
     };
-    link(ui, "appPage", Icon::Globe, "JBD on jabrod.com", links::APP_PAGE, true);
+    link(ui, "appPage", Icon::Globe, "Art Studio on art.jabrod.com", links::APP_PAGE, true);
     ui.add_space(6.0);
     link(ui, "support", Icon::Chat, "Contact support", links::SUPPORT, false);
     link(ui, "website", Icon::Globe, "jabrod.com", links::WEBSITE, false);

@@ -453,7 +453,7 @@ pub fn free_export_notice(ui: &mut egui::Ui, free: bool, t: &crate::theme::Token
         ui,
         |ui| {
             ui.horizontal_wrapped(|ui| {
-                ui.label(egui::RichText::new("JBD Free").font(crate::theme::Tokens::semibold(12.0)).color(t.text));
+                ui.label(egui::RichText::new("Free plan").font(crate::theme::Tokens::semibold(12.0)).color(t.text));
                 ui.label(egui::RichText::new("exports up to 720p with a small “Made with JBD” mark.").color(t.text_dim));
                 upgrade = Some(style::small_primary_button(ui, "Upgrade to Pro", t));
             });

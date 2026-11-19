@@ -185,9 +185,9 @@ pub fn install(app: &mut FilmcraftApp, ctx: &egui::Context) {
     };
     ctx.open_url(egui::OpenUrl::new_tab(url));
     app.ui.status = if from_store() {
-        "Opened JBD in the Microsoft Store: choose Update there.".into()
+        "Opened Art Studio in the Microsoft Store: choose Update there.".into()
     } else {
-        format!("Downloading JBD {}: run the installer when it finishes.", r.version)
+        format!("Downloading Art Studio {}: run the installer when it finishes.", r.version)
     };
 }
 
@@ -198,7 +198,7 @@ pub fn chip(app: &mut FilmcraftApp, ui: &mut egui::Ui, right: f32, cy: f32) -> O
     let p = ui.painter();
     let g = p.layout_no_wrap("Update".to_string(), Tokens::semibold(11.5), t.text);
     let rect = egui::Rect::from_min_max(egui::pos2(right - g.size().x - 30.0, cy - 12.0), egui::pos2(right, cy + 12.0));
-    let resp = ui.interact(rect, egui::Id::new("jbd-update-chip"), egui::Sense::click()).on_hover_text(format!("JBD {} is available", r.version));
+    let resp = ui.interact(rect, egui::Id::new("jbd-update-chip"), egui::Sense::click()).on_hover_text(format!("Art Studio {} is available", r.version));
     app.auto.add("titlebar.update", rect, "Update available");
     p.rect_filled(rect, 12.0, if resp.hovered() { t.hover } else { t.field_bg });
     p.rect_stroke(rect, 12.0, egui::Stroke::new(1.0, t.field_border), egui::StrokeKind::Inside);
@@ -230,7 +230,7 @@ fn send(app: &mut FilmcraftApp, ctx: &egui::Context) {
     let d = app.jbd.updates.draft.clone();
     let subject = if d.subject.trim().is_empty() { d.message.lines().next().unwrap_or("").chars().take(80).collect() } else { d.subject.trim().to_string() };
     let context = vec![
-        ("App".to_string(), format!("JBD {VERSION}")),
+        ("App".to_string(), format!("Art Studio {VERSION}")),
         ("Installed from".to_string(), if from_store() { "Microsoft Store" } else { "jabrod.com installer" }.to_string()),
         ("System".to_string(), format!("{} {}", std::env::consts::OS, std::env::consts::ARCH)),
     ];
@@ -263,7 +263,7 @@ fn send(app: &mut FilmcraftApp, ctx: &egui::Context) {
         _ => {
             // signed out: the person's own email app, with everything filled in
             let body = format!("{}\n\n--\n{}", report.message, report.context.iter().map(|(k, v)| format!("{k}: {v}")).collect::<Vec<_>>().join("\n"));
-            let url = format!("mailto:contact@jabrod.com?subject={}&body={}", encode(&format!("JBD: {subject}")), encode(&body));
+            let url = format!("mailto:contact@jabrod.com?subject={}&body={}", encode(&format!("Art Studio: {subject}")), encode(&body));
             ctx.open_url(egui::OpenUrl::new_tab(url));
             app.jbd.updates.dialog = None;
             app.ui.status = "Opened an email to contact@jabrod.com.".into();
@@ -286,7 +286,7 @@ fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
     let t = app.tokens;
     let mut open = true;
     let title = match which {
-        Dialog::WhatsNew => "What's New in JBD",
+        Dialog::WhatsNew => "What's New in Art Studio",
         Dialog::Update => "Updates",
         Dialog::Report => "Report a Problem",
     };
@@ -301,7 +301,7 @@ fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
         .show(ctx, |ui| {
             match which {
                 Dialog::WhatsNew => {
-                    ui.label(RichText::new(format!("You're on JBD {VERSION}")).size(11.5).color(t.text_faint));
+                    ui.label(RichText::new(format!("You're on Art Studio {VERSION}")).size(11.5).color(t.text_faint));
                     egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
                         super::director::markdown(ui, CHANGELOG, &t);
                     });
@@ -318,7 +318,7 @@ fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
                     let checking = app.jbd.updates.checking.load(Ordering::Relaxed);
                     match app.jbd.updates.available() {
                         Some(r) => {
-                            ui.label(RichText::new(format!("JBD {} is available", r.version)).font(Tokens::semibold(15.0)).color(t.text));
+                            ui.label(RichText::new(format!("Art Studio {} is available", r.version)).font(Tokens::semibold(15.0)).color(t.text));
                             ui.label(RichText::new(format!("You have {VERSION}.")).size(11.5).color(t.text_dim));
                             ui.add_space(4.0);
                             for n in r.notes.iter().take(8) {
@@ -350,7 +350,7 @@ fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
                                     ui.label(RichText::new(format!("{e}. Check your internet connection, then try again.")).size(11.5).color(t.text_dim));
                                 }
                                 None => {
-                                    ui.label(RichText::new("JBD is up to date.").font(Tokens::semibold(14.0)).color(t.text));
+                                    ui.label(RichText::new("Art Studio is up to date.").font(Tokens::semibold(14.0)).color(t.text));
                                     ui.label(RichText::new(format!("You have the latest version, {VERSION}.")).size(11.5).color(t.text_dim));
                                 }
                             }
@@ -382,7 +382,7 @@ fn show(app: &mut FilmcraftApp, ctx: &egui::Context) {
                             .desired_rows(7)
                             .desired_width(f32::INFINITY),
                     );
-                    ui.checkbox(&mut d.include_log, "Include JBD's recent log (no project files or media)");
+                    ui.checkbox(&mut d.include_log, "Include Art Studio's recent log (no project files or media)");
                     let ok = d.message.trim().chars().count() >= 10;
                     let (subject_rect, message_rect) = (subject.rect, message.rect);
                     ui.add_space(4.0);

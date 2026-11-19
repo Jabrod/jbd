@@ -332,7 +332,7 @@ struct ChannelEditor {
 impl jbd_director::Editor for ChannelEditor {
     fn call(&self, method: &str, params: Value) -> Result<Value, String> {
         let (req, reply) = ControlRequest::new(method, params);
-        self.tx.send(req).map_err(|_| "JBD is closing".to_string())?;
+        self.tx.send(req).map_err(|_| "Art Studio is closing".to_string())?;
         self.ctx.request_repaint();
         // reading footage decodes whole clips (and transcribing a long one takes minutes); Stop
         // still ends it early, because the worker checks it between pieces
@@ -419,7 +419,7 @@ pub fn send(app: &mut FilmcraftApp, ctx: &egui::Context) {
             return;
         };
         if !app.jbd.status.is_pro() {
-            lock(&app.jbd.director.shared).push(Entry::Error("The AI Director is part of JBD Pro. Upgrade at jabrod.com/jbd/upgrade.".into()));
+            lock(&app.jbd.director.shared).push(Entry::Error("The AI Director is part of Pro. Upgrade at jabrod.com/jbd/upgrade.".into()));
             return;
         }
         app.jbd.director.input.clear();
@@ -578,7 +578,7 @@ pub fn drain(app: &mut FilmcraftApp, ctx: &egui::Context) {
                 let answer = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| control::handle(app, ctx, &req))) {
                     Ok(control::Outcome::Done(v)) => v,
                     Ok(_) => json!({"ok": false, "error": "that command needs the window and can't be run by the Director"}),
-                    Err(_) => json!({"ok": false, "error": "the command failed inside JBD; try another way"}),
+                    Err(_) => json!({"ok": false, "error": "the command failed inside Art Studio; try another way"}),
                 };
                 own_new_steps(app, top.as_ref());
                 // a tracking job writes its result later, as a step of its own: remember it

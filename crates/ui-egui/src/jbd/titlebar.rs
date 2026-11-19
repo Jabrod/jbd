@@ -108,7 +108,7 @@ const MENUS: [(&str, &[Entry]); 6] = [
     (
         "Help",
         &[
-            Jbd("jbd.whatsNew", "What's New in JBD", None),
+            Jbd("jbd.whatsNew", "What's New in Art Studio", None),
             Jbd("jbd.checkUpdates", "Check for Updates…", None),
             Jbd("jbd.report", "Report a Problem…", None),
             Sep,
@@ -116,7 +116,7 @@ const MENUS: [(&str, &[Entry]); 6] = [
             Cmd("help.support"),
             Cmd("help.revealLogFiles"),
             Sep,
-            As("app.about", "About JBD"),
+            As("app.about", "About Art Studio"),
         ],
     ),
 ];
@@ -142,7 +142,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
     let mut x = rect.min.x + 14.0;
     cube::paint(&p, pos2(x + 9.0, cy), 11.0, cube::Pose::LOGO, cube::Reveal::ALL, 1.0);
     x += 24.0;
-    let word = p.text(pos2(x, cy), Align2::LEFT_CENTER, "JBD", Tokens::display(15.0), t.text);
+    let word = p.text(pos2(x, cy), Align2::LEFT_CENTER, "Art Studio", Tokens::display(15.0), t.text);
     let home = Rect::from_min_max(pos2(rect.min.x + 8.0, rect.min.y + 6.0), pos2(word.max.x + 4.0, rect.max.y - 6.0));
     let hresp = ui.interact(home, egui::Id::new("jbd-titlebar-home"), Sense::click()).on_hover_text("Start screen");
     app.auto.add("titlebar.home", home, "Start screen");

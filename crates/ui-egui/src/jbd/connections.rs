@@ -1,7 +1,7 @@
 //! JBD ▸ Settings ▸ Connections and ▸ Connectors.
 //!
 //! - **Connections**: other AI apps (Claude Code, Claude Desktop, any MCP client) can drive JBD
-//!   the way the Director does. "Let AI apps control JBD" starts the local control server
+//!   the way the Director does. "Let AI apps control Art Studio" starts the local control server
 //!   (127.0.0.1 only, port [`PORT`]); JBD's MCP program (`jbd-mcp.exe` beside `jbd.exe`, or
 //!   `filmcraft-cli.exe` in a developer build) bridges an AI app to it. The choice is saved in
 //!   `<JBD data>/connections.json` and applied at the next launch too.
@@ -94,8 +94,8 @@ fn mcp_program() -> Option<std::path::PathBuf> {
 pub fn connections(app: &mut FilmcraftApp, ui: &mut egui::Ui, ctx: &egui::Context, t: &Tokens) {
     let on = app.has_control();
     let mut allow = on || load_prefs().allow_control;
-    let toggle = ui.checkbox(&mut allow, RichText::new("Let AI apps control JBD").color(t.text));
-    app.auto.add("settings.connections.allow", toggle.rect, "Let AI apps control JBD");
+    let toggle = ui.checkbox(&mut allow, RichText::new("Let AI apps control Art Studio").color(t.text));
+    app.auto.add("settings.connections.allow", toggle.rect, "Let AI apps control Art Studio");
     if toggle.changed() {
         save_prefs(&Prefs { allow_control: allow });
         if allow && !on {
@@ -104,7 +104,7 @@ pub fn connections(app: &mut FilmcraftApp, ui: &mut egui::Ui, ctx: &egui::Contex
     }
     ui.label(
         RichText::new(
-            "Claude Code, Claude Desktop or any MCP app can then edit in JBD with the same commands the Director uses. Only apps on this computer can connect.",
+            "Claude Code, Claude Desktop or any MCP app can then edit in Art Studio with the same commands the Director uses. Only apps on this computer can connect.",
         )
         .size(12.0)
         .color(t.text_dim),
@@ -113,23 +113,23 @@ pub fn connections(app: &mut FilmcraftApp, ui: &mut egui::Ui, ctx: &egui::Contex
         (_, true) => (format!("On: listening on 127.0.0.1:{PORT}"), t.text),
         (Some(Err(e)), _) => (format!("Couldn't start: {e}"), t.danger),
         _ if !allow => ("Off".to_string(), t.text_faint),
-        _ => ("Off until JBD restarts".to_string(), t.text_faint),
+        _ => ("Off until Art Studio restarts".to_string(), t.text_faint),
     };
     ui.label(RichText::new(status.0).size(12.0).color(status.1));
     if !allow && on {
-        ui.label(RichText::new("It stays on until you close JBD.").size(11.5).color(t.text_faint));
+        ui.label(RichText::new("It stays on until you close Art Studio.").size(11.5).color(t.text_faint));
     }
     ui.add_space(16.0);
 
     let Some(program) = mcp_program() else {
-        ui.label(RichText::new("JBD's MCP program (jbd-mcp.exe) wasn't found next to JBD. Reinstall JBD to get it.").size(12.0).color(t.text_dim));
+        ui.label(RichText::new("Art Studio's MCP program (jbd-mcp.exe) wasn't found next to it. Reinstall Art Studio to get it.").size(12.0).color(t.text_dim));
         return;
     };
     let program = program.to_string_lossy().to_string();
     let bridge = format!("127.0.0.1:{PORT}");
 
     ui.label(RichText::new("Claude Code").font(Tokens::semibold(14.0)).color(t.text));
-    ui.label(RichText::new("Run this once in a terminal, then ask Claude Code to edit your JBD project.").size(12.0).color(t.text_dim));
+    ui.label(RichText::new("Run this once in a terminal, then ask Claude Code to edit your Art Studio project.").size(12.0).color(t.text_dim));
     let cmd = format!("claude mcp add jbd -- \"{program}\" mcp --bridge {bridge}");
     copy_block(app, ui, ctx, t, "settings.connections.copyClaudeCode", &cmd);
     ui.add_space(12.0);

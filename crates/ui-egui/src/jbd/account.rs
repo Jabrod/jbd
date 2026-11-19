@@ -114,7 +114,7 @@ fn menu(app: &mut FilmcraftApp, ctx: &egui::Context, chip: Rect) {
                     }
                     None => {
                         ui.label(
-                            egui::RichText::new(if status.checking { "Checking with jabrod.com…" } else { "Shown once JBD reaches jabrod.com." })
+                            egui::RichText::new(if status.checking { "Checking with jabrod.com…" } else { "Shown once Art Studio reaches jabrod.com." })
                                 .font(Tokens::ui(11.5))
                                 .color(t.text_faint),
                         );
@@ -150,8 +150,8 @@ fn menu(app: &mut FilmcraftApp, ctx: &egui::Context, chip: Rect) {
                     super::settings::open(app, "account");
                     close = true;
                 }
-                let manage = style::menu_row(ui, "JBD on jabrod.com", &t, None);
-                app.auto.add("account.manage", manage.rect, "JBD on jabrod.com");
+                let manage = style::menu_row(ui, "Art Studio on jabrod.com", &t, None);
+                app.auto.add("account.manage", manage.rect, "Art Studio on jabrod.com");
                 if manage.clicked() {
                     open_page(ctx, Page::Product);
                     close = true;

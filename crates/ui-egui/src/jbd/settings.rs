@@ -18,7 +18,7 @@ use crate::theme::Tokens;
 
 /// JBD's sections: id, title, what it's for, and the schema pages whose wired settings it shows.
 const SECTIONS: [(&str, &str, &str, &[&str]); 12] = [
-    ("general", "General", "What JBD does when it opens, and saving your work.", &["general", "autoSave"]),
+    ("general", "General", "What Art Studio does when it opens, and saving your work.", &["general", "autoSave"]),
     ("account", "Account", "Your Jabrod account, plan and AI credits.", &[]),
     ("usage", "Usage", "What the AI Director used, your monthly credits and pay-as-you-go.", &[]),
     ("appearance", "Appearance", "Theme and contrast.", &["appearance"]),
@@ -28,14 +28,14 @@ const SECTIONS: [(&str, &str, &str, &[&str]); 12] = [
     ("transcription", "Transcription", "Speech to text on this computer.", &["mediaAnalysis"]),
     ("media", "Media & cache", "Importing media and the disk cache.", &["media", "mediaCache"]),
     ("keyboard", "Keyboard", "Keyboard shortcuts.", &[]),
-    ("connections", "Connections", "Let Claude Code and other AI apps work in JBD.", &[]),
+    ("connections", "Connections", "Let Claude Code and other AI apps work in Art Studio.", &[]),
     ("connectors", "Connectors", "Services the Director can use, like Google Drive or Figma.", &[]),
 ];
 
 /// Clearer names for a few engine labels.
 fn relabel(key: &str, label: &str) -> String {
     let l = match key {
-        "general.atStartup" => "When JBD opens",
+        "general.atStartup" => "When Art Studio opens",
         "autoSave.enabled" => "Save projects automatically",
         "playback.hardwareDecoding" => "Use the graphics card to decode video",
         _ => label,

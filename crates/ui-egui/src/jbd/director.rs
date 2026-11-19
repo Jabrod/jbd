@@ -158,7 +158,7 @@ fn pro_wall(app: &mut FilmcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     ui.add_space(18.0);
     egui::Frame::new().fill(t.field_bg).stroke(Stroke::new(1.0, t.field_border)).corner_radius(12.0).inner_margin(18.0).show(ui, |ui| {
         ui.set_width(ui.available_width());
-        ui.label(RichText::new("The AI Director is part of JBD Pro").font(Tokens::semibold(16.0)).color(t.text));
+        ui.label(RichText::new("The AI Director is part of Pro").font(Tokens::semibold(16.0)).color(t.text));
         ui.add_space(4.0);
         ui.label(RichText::new("Describe the edit you want, and the Director plans it and edits your timeline step by step.").size(12.5).color(t.text_dim));
         ui.add_space(10.0);

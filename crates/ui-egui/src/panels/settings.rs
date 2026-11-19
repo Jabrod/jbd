@@ -392,7 +392,7 @@ fn custom(app: &mut FilmcraftApp, ui: &mut Ui, d: &mut SettingsDraft, name: &str
         "memoryInfo" => {
             let (used, budget) = app.frames.cache_usage();
             note(ui, &t, &format!("Decoded frames held for the monitors and thumbnails: {} of {}.", mb(used as u64), mb(budget as u64)));
-            note(ui, &t, "JBD keeps the rest of the RAM free for other applications.");
+            note(ui, &t, "Art Studio keeps the rest of the RAM free for other applications.");
         }
         "mediaCacheInfo" => {
             if d.cache_info.is_null() {

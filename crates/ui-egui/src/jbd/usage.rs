@@ -179,7 +179,7 @@ pub fn page(app: &mut FilmcraftApp, ui: &mut egui::Ui, ctx: &egui::Context, t: &
     if r.plan != "pro" && r.plan != "trial" {
         egui::Frame::new().fill(t.field_bg).corner_radius(10.0).inner_margin(14.0).show(ui, |ui| {
             ui.set_width(ui.available_width());
-            ui.label(RichText::new("The AI Director is part of JBD Pro").font(Tokens::semibold(14.0)).color(t.text));
+            ui.label(RichText::new("The AI Director is part of Pro").font(Tokens::semibold(14.0)).color(t.text));
             ui.label(
                 RichText::new(
                     "Pro includes 1,000 AI credits every month for the Director's thinking, video and voiceover, and pay-as-you-go when you need more.",

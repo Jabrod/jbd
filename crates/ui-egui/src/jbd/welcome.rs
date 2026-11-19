@@ -55,7 +55,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
 
     // the logo
     cube::paint(&p, pos2(left + 30.0, top + 30.0), 26.0, cube::Pose::LOGO, cube::Reveal::ALL, 1.0);
-    p.text(pos2(left + 76.0, top + 22.0), Align2::LEFT_CENTER, "JBD", Tokens::display(44.0), t.text);
+    p.text(pos2(left + 76.0, top + 22.0), Align2::LEFT_CENTER, "Art Studio", Tokens::display(44.0), t.text);
     p.text(pos2(left + 78.0, top + 56.0), Align2::LEFT_CENTER, "AI video editor by Jabrod", Tokens::ui(17.0), t.text_dim);
 
     // templates
@@ -115,7 +115,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, rect: Rect) {
         }
     }
     let demo_r = Rect::from_min_size(pos2(open_r.max.x + 14.0, y), vec2(150.0, 38.0));
-    let dresp = ui.interact(demo_r, egui::Id::new("welcome-demo"), Sense::click()).on_hover_text("A short edited sequence to explore JBD with");
+    let dresp = ui.interact(demo_r, egui::Id::new("welcome-demo"), Sense::click()).on_hover_text("A short edited sequence to explore Art Studio with");
     app.auto.add("welcome.demo", demo_r, "Try the demo");
     p.text(
         demo_r.left_center() + vec2(8.0, 0.0),

@@ -1,5 +1,5 @@
 //! The JBD logo: the isometric cube (Jabrod trademark, `assets/jbd/`, not open source) next to
-//! the "JBD" name, decoded once and kept as a texture. Used in About and on the Home screen.
+//! the "Art Studio" name, decoded once and kept as a texture. Used in About and on the Home screen.
 
 const LOGO: &[u8] = include_bytes!("../../../assets/jbd/jbd-logo.png");
 
@@ -18,7 +18,7 @@ pub fn logo(ctx: &egui::Context) -> Option<egui::TextureHandle> {
     Some(tex)
 }
 
-/// Draw the cube `height` points tall followed by "JBD", with the left edge at `left_center`
+/// Draw the cube `height` points tall followed by "Art Studio", with the left edge at `left_center`
 /// (vertically centred). `dark` picks the text colour. Returns the drawn rect (cube and name).
 pub fn paint_wordmark(ui: &egui::Ui, left_center: egui::Pos2, height: f32, dark: bool) -> Option<egui::Rect> {
     let tex = logo(ui.ctx())?;
@@ -30,7 +30,7 @@ pub fn paint_wordmark(ui: &egui::Ui, left_center: egui::Pos2, height: f32, dark:
     let name = ui.painter().text(
         egui::pos2(cube.max.x + height * 0.3, left_center.y),
         egui::Align2::LEFT_CENTER,
-        "JBD",
+        "Art Studio",
         crate::theme::Tokens::semibold(height * 0.8),
         ink,
     );

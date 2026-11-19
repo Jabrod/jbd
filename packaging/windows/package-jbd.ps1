@@ -77,7 +77,7 @@ $subsystem = [BitConverter]::ToUInt16($bytes, $pe + 0x5C)
 if ($machine -ne 0x8664) { throw ('jbd.exe is for machine 0x{0:X}, expected x64' -f $machine) }
 if ($subsystem -ne 2) { throw "jbd.exe has PE subsystem $subsystem, expected 2 (Windows GUI)" }
 $info = (Get-Item $Exe).VersionInfo
-if ($info.ProductName -ne 'JBD') { throw "jbd.exe has no JBD version info (ProductName '$($info.ProductName)')" }
+if ($info.ProductName -ne 'Art Studio') { throw "jbd.exe has no Art Studio version info (ProductName '$($info.ProductName)')" }
 Write-Output "ok jbd.exe: x64, GUI, ProductName JBD"
 
 # the files every package ships
@@ -100,7 +100,7 @@ if (-not (Test-Path $MakeNsis)) { throw "makensis not found ($MakeNsis). Install
 $Setup = Join-Path $Dist "JBD-$Version-setup.exe"
 $SizeKb = [int][math]::Ceiling(((Get-ChildItem $Stage | Measure-Object Length -Sum).Sum) / 1024)
 Invoke-Native 'makensis' {
-  & $MakeNsis /V2 "/DVER=$Plain" "/DSTAGE=$Stage" "/DICON=$(Join-Path $Root 'assets\jbd\jbd.ico')" "/DOUT=$Setup" "/DSIZE_KB=$SizeKb" (Join-Path $PSScriptRoot 'jbd.nsi')
+  & $MakeNsis /V2 "/DVER=$Plain" "/DSTAGE=$Stage" "/DICON=$(Join-Path $Root 'assets\jbd\art-studio.ico')" "/DOUT=$Setup" "/DSIZE_KB=$SizeKb" (Join-Path $PSScriptRoot 'jbd.nsi')
 }
 }
 
@@ -120,7 +120,7 @@ Copy-Item (Join-Path $Stage '*') $MsixStage
 Copy-Item (Join-Path $Root 'assets\jbd\store\*.png') (Join-Path $MsixStage 'Assets')
 # the 310x150 wide tile: the full-bleed icon centred with transparent sides (never stretched)
 Add-Type -AssemblyName System.Drawing
-$src = [System.Drawing.Image]::FromFile((Join-Path $Root 'assets\jbd\jbd-icon-1024.png'))
+$src = [System.Drawing.Image]::FromFile((Join-Path $Root 'assets\jbd\art-studio-icon-1024.png'))
 $wide = New-Object System.Drawing.Bitmap 310, 150
 $g = [System.Drawing.Graphics]::FromImage($wide)
 try {

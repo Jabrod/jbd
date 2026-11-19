@@ -4,17 +4,17 @@
 //! software JBD includes is credited in THIRD-PARTY-NOTICES.txt, shipped next to jbd.exe.
 
 /// JBD's page on jabrod.com.
-pub const APP_PAGE: &str = "https://jabrod.com/jbd";
+pub const APP_PAGE: &str = "https://art.jabrod.com";
 /// The Jabrod website.
 pub const WEBSITE: &str = "https://jabrod.com";
 /// Support: an email to the Jabrod team.
-pub const SUPPORT: &str = "mailto:contact@jabrod.com?subject=JBD%20support";
+pub const SUPPORT: &str = "mailto:contact@jabrod.com?subject=Art%20Studio%20support";
 /// Jabrod's terms of service and privacy policy.
 pub const TERMS: &str = "https://jabrod.com/terms";
 
 /// (command id, label, url) for every link, in menu order.
 pub const ALL: [(&str, &str, &str); 4] = [
-    ("help.appPage", "JBD on jabrod.com", APP_PAGE),
+    ("help.appPage", "Art Studio on art.jabrod.com", APP_PAGE),
     ("help.support", "Contact Support…", SUPPORT),
     ("help.website", "Jabrod Website", WEBSITE),
     ("help.terms", "Terms and Privacy", TERMS),

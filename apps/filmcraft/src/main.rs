@@ -40,9 +40,9 @@ use serde_json::json;
 const APP_ID: &str = "com.jabrod.jbd";
 
 /// The window, taskbar and app-switcher icon: the JBD cube (`assets/jbd/`). The .exe file icon
-/// in Explorer comes from `assets/jbd/jbd.ico` via build.rs.
+/// in Explorer comes from `assets/jbd/art-studio.ico` via build.rs.
 fn app_icon() -> egui::IconData {
-    let png: &[u8] = include_bytes!("../../../assets/jbd/jbd-icon-256.png");
+    let png: &[u8] = include_bytes!("../../../assets/jbd/art-studio-icon-256.png");
     eframe::icon_data::from_png_bytes(png).unwrap_or_default()
 }
 
@@ -112,7 +112,7 @@ fn tell(text: &str, error: bool) {
     #[cfg(all(target_os = "windows", not(debug_assertions)))]
     {
         let level = if error { rfd::MessageLevel::Error } else { rfd::MessageLevel::Info };
-        let _ = rfd::MessageDialog::new().set_level(level).set_title("JBD").set_description(text).show();
+        let _ = rfd::MessageDialog::new().set_level(level).set_title("Art Studio").set_description(text).show();
     }
 }
 
@@ -143,7 +143,7 @@ fn main() -> eframe::Result {
     register_hardware_decoders();
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("JBD")
+            .with_title("Art Studio")
             // Windows: no system frame; JBD draws its own title bar and window buttons (jbd/titlebar.rs)
             .with_decorations(!cfg!(windows))
             .with_inner_size([1600.0, 980.0])
@@ -163,6 +163,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     let started = eframe::run_native(
+        // eframe keeps settings under this name: it stays "JBD" so existing installs keep theirs.
         "JBD",
         options,
         Box::new(move |cc| {
@@ -234,7 +235,7 @@ fn main() -> eframe::Result {
                 rfd::FileDialog::new().add_filter("Media", exts).pick_files().unwrap_or_default().into_iter().map(|p| p.to_string_lossy().to_string()).collect()
             }));
             app.hooks.pick_save = Some(Box::new(|name: &str| {
-                rfd::FileDialog::new().add_filter("JBD Project", &["fcproj"]).set_file_name(name).save_file().map(|p| p.to_string_lossy().to_string())
+                rfd::FileDialog::new().add_filter("Art Studio Project", &["fcproj"]).set_file_name(name).save_file().map(|p| p.to_string_lossy().to_string())
             }));
             app.hooks.pick_save_as = Some(Box::new(|filter: &str, exts: &[&str], name: &str| {
                 rfd::FileDialog::new().add_filter(filter, exts).set_file_name(name).save_file().map(|p| p.to_string_lossy().to_string())
@@ -248,7 +249,7 @@ fn main() -> eframe::Result {
                 rfd::FileDialog::new().add_filter(filter, exts).pick_file().map(|p| p.to_string_lossy().to_string())
             }));
             app.hooks.pick_open_project =
-                Some(Box::new(|| rfd::FileDialog::new().add_filter("JBD Project", &["fcproj"]).pick_file().map(|p| p.to_string_lossy().to_string())));
+                Some(Box::new(|| rfd::FileDialog::new().add_filter("Art Studio Project", &["fcproj"]).pick_file().map(|p| p.to_string_lossy().to_string())));
             #[cfg(target_os = "macos")]
             {
                 let (rx, update) = native_menu::install(&app, cc.egui_ctx.clone());
@@ -272,7 +273,7 @@ fn main() -> eframe::Result {
         let msg = format!("JBD could not start its window: {e}\n\nUpdating the graphics driver usually fixes this.");
         eprintln!("filmcraft: {msg}");
         filmcraft_ui_egui::crash::record(&msg);
-        let _ = rfd::MessageDialog::new().set_title("JBD").set_description(&msg).set_level(rfd::MessageLevel::Error).show();
+        let _ = rfd::MessageDialog::new().set_title("Art Studio").set_description(&msg).set_level(rfd::MessageLevel::Error).show();
     }
     started
 }

@@ -1,6 +1,6 @@
 [package]
 name = "filmcraft"
-description = "JBD, AI video editor by Jabrod (desktop app)"
+description = "Art Studio by Jabrod (desktop app)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -131,6 +131,9 @@ marks: FilmCraft's brand licence requires forks to remove them.
 | File | Author | Source | Licence |
 |---|---|---|---|
 | `assets/jbd/jbd-logo.png` | Jabrod (Anshuman) | Original work: the JBD cube logo (466x512, transparent), from the first JBD app (src/assets/jbd-logo.png) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/art-studio-icon-256.png` | Jabrod (Anshuman) | Original work: the Art Studio app icon (Jabrod mark), 256 px tile | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/art-studio-icon-1024.png` | Jabrod (Anshuman) | Original work: the Art Studio app icon (Jabrod mark), 1024 px tile | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
+| `assets/jbd/art-studio.ico` | Jabrod (Anshuman) | Original work: the Art Studio app icon as a Windows .ico (16-256 px) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
 | `assets/jbd/jbd-icon-256.png` | Jabrod (Anshuman) | Original work: the JBD app icon, full-bleed 256 px tile, from the first JBD app (src-tauri/icons) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
 | `assets/jbd/jbd.ico` | Jabrod (Anshuman) | Original work: the JBD app icon as a Windows .ico (16-256 px, taskbar-tuned), from the first JBD app (src-tauri/icons/icon.ico) | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |
 | `assets/jbd/cube-film.png` | Jabrod (Anshuman) | Original work: the JBD logo artwork, rendered from the first JBD's SVG faces by jbd-media/tools/cube-faces.cjs | LicenseRef-Jabrod-Trademark; not open source, `assets/jbd/LICENSE-brand.txt` (not MIT/Apache) |

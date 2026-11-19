@@ -31,7 +31,7 @@ pub const STEPS: [(&str, f64); 6] = [
     ("Starting the video engine", 0.7),
     ("Preparing the GPU", 1.1),
     ("Testing video encoders", 1.5),
-    ("Opening JBD", 1.95),
+    ("Opening Art Studio", 1.95),
 ];
 
 /// The splash's clock: animation time, advanced each drawn frame by the real time since the
@@ -74,7 +74,7 @@ pub fn show(app: &mut FilmcraftApp, ui: &mut egui::Ui, status: &AccountStatus) -
     if resp.drag_started() {
         ctx.send_viewport_cmd(egui::ViewportCommand::StartDrag);
     }
-    app.auto.add("jbd.splash", rect, "JBD is starting");
+    app.auto.add("jbd.splash", rect, "Art Studio is starting");
     let account_read = status.phase != Phase::Starting;
     let done = account_read && (t >= MIN_SHOW || (resp.clicked() && t > 0.4));
     paint(ui.painter(), rect, t, &t_tokens);
@@ -107,7 +107,7 @@ pub fn paint(painter: &egui::Painter, rect: Rect, t: f64, tk: &Tokens) {
     let rise = (1.0 - style::ease_out(fade)) * 10.0;
     let ink = |c: Color32| c.gamma_multiply(fade);
     let word_y = center.y + edge * 1.25 + rise;
-    let word = painter.text(pos2(center.x, word_y), Align2::CENTER_TOP, "JBD", Tokens::display(edge * 0.92), ink(tk.text));
+    let word = painter.text(pos2(center.x, word_y), Align2::CENTER_TOP, "Art Studio", Tokens::display(edge * 0.92), ink(tk.text));
     style::spaced(painter, pos2(center.x, word.max.y + 16.0), Align2::CENTER_TOP, "AI VIDEO EDITOR BY JABROD", Tokens::medium(13.0), ink(tk.text_dim), 5.0);
     // the progress bar, the current step and the percentage
     let step = STEPS.iter().rposition(|(_, at)| t >= *at).unwrap_or(0);

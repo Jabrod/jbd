@@ -1,6 +1,13 @@
 # Changelog
 
-All notable changes to JBD, newest first. Each version is a tag (v1.1.0, …) and a release on GitHub; the same notes are at jabrod.com/jbd/changelog and in the app under Help ▸ What's New.
+All notable changes to Art Studio (called JBD until 1.3.0), newest first. Each version is a tag (v1.1.0, …) and a release on GitHub; the same notes are at jabrod.com/jbd/changelog and in the app under Help, What's New.
+
+## 1.3.0 · not released yet
+
+### JBD is now Art Studio
+- **A new name and icon.** The app is now called Art Studio, with the Jabrod mark as its icon, in the window, the Start menu, the taskbar and Apps & features.
+- **Nothing to redo.** It updates in place: your projects, settings, sign-in and plan stay as they are, and the Start menu and desktop shortcuts are renamed.
+- Help and the account menu now open Art Studio's pages on jabrod.com.
 
 ## 1.2.0 · 13 November 2026
 

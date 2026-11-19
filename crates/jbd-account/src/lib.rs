@@ -196,7 +196,7 @@ impl AccountStatus {
 pub enum Page {
     /// Buy JBD Pro (Dodo Payments checkout behind it).
     Upgrade,
-    /// JBD's product page.
+    /// The Art Studio page.
     Product,
     /// Help: email support.
     Support,
@@ -206,8 +206,8 @@ impl Page {
     pub fn url(self) -> String {
         match self {
             Page::Upgrade => format!("{}/jbd/upgrade", platform_url()),
-            Page::Product => format!("{}/jbd", platform_url()),
-            Page::Support => "mailto:contact@jabrod.com?subject=JBD%20support".to_string(),
+            Page::Product => format!("{}/art", platform_url()),
+            Page::Support => "mailto:contact@jabrod.com?subject=Art%20Studio%20support".to_string(),
         }
     }
 }

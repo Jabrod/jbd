@@ -15,7 +15,7 @@ SetCompressor /SOLID lzma
 RequestExecutionLevel user
 ManifestDPIAware true
 
-!define PRODUCT "JBD"
+!define PRODUCT "Art Studio"
 !define PUBLISHER "Jabrod"
 !define EXE "jbd.exe"
 !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\JBD"
@@ -29,9 +29,9 @@ Icon "${ICON}"
 UninstallIcon "${ICON}"
 
 VIProductVersion "${VER}.0"
-VIAddVersionKey "ProductName" "JBD"
+VIAddVersionKey "ProductName" "Art Studio"
 VIAddVersionKey "CompanyName" "Jabrod"
-VIAddVersionKey "FileDescription" "JBD - AI video editor by Jabrod (setup)"
+VIAddVersionKey "FileDescription" "Art Studio by Jabrod (setup)"
 VIAddVersionKey "FileVersion" "${VER}"
 VIAddVersionKey "ProductVersion" "${VER}"
 VIAddVersionKey "LegalCopyright" "Copyright (c) Jabrod"
@@ -63,9 +63,9 @@ FunctionEnd
 !define MUI_ICON "${ICON}"
 !define MUI_UNICON "${ICON}"
 !define MUI_ABORTWARNING
-!define MUI_LICENSEPAGE_TEXT_TOP "Please read the JBD terms. Click I Agree to install."
+!define MUI_LICENSEPAGE_TEXT_TOP "Please read the Art Studio terms. Click I Agree to install."
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${EXE}"
-!define MUI_FINISHPAGE_RUN_TEXT "Open JBD"
+!define MUI_FINISHPAGE_RUN_TEXT "Open Art Studio"
 
 !insertmacro MUI_PAGE_LICENSE "${STAGE}\EULA.txt"
 !insertmacro MUI_PAGE_INSTFILES
@@ -82,8 +82,8 @@ Section "JBD" Main
     ClearErrors
     Delete "$INSTDIR\${EXE}"
     IfErrors 0 +3
-      MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "JBD is open. Close JBD, then click Retry." /SD IDCANCEL IDRETRY retry
-      Abort "JBD is still open."
+      MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "Art Studio is open. Close it, then click Retry." /SD IDCANCEL IDRETRY retry
+      Abort "Art Studio is still open."
 
   ; leftovers of the first JBD (Tauri + FFmpeg)
   Delete "$INSTDIR\ffmpeg.exe"
@@ -98,11 +98,16 @@ Section "JBD" Main
   File "${STAGE}\EULA.txt"
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
-  CreateShortcut "$SMPROGRAMS\JBD.lnk" "$INSTDIR\${EXE}" "" "$INSTDIR\${EXE}" 0
-  CreateShortcut "$DESKTOP\JBD.lnk" "$INSTDIR\${EXE}" "" "$INSTDIR\${EXE}" 0
+  ; JBD is now Art Studio: replace the old shortcuts
+  Delete "$SMPROGRAMS\Art Studio.lnk"
+  Delete "$DESKTOP\Art Studio.lnk"
+  Delete "$SMPROGRAMS\JBD.lnk"
+  Delete "$DESKTOP\JBD.lnk"
+  CreateShortcut "$SMPROGRAMS\Art Studio.lnk" "$INSTDIR\${EXE}" "" "$INSTDIR\${EXE}" 0
+  CreateShortcut "$DESKTOP\Art Studio.lnk" "$INSTDIR\${EXE}" "" "$INSTDIR\${EXE}" 0
 
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\App Paths\${EXE}" "" "$INSTDIR\${EXE}"
-  WriteRegStr HKCU "${UNINST_KEY}" "DisplayName" "JBD"
+  WriteRegStr HKCU "${UNINST_KEY}" "DisplayName" "Art Studio"
   WriteRegStr HKCU "${UNINST_KEY}" "DisplayVersion" "${VER}"
   WriteRegStr HKCU "${UNINST_KEY}" "Publisher" "${PUBLISHER}"
   WriteRegStr HKCU "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\${EXE}"
