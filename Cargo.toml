@@ -14,6 +14,7 @@ repository = "https://github.com/storytold/filmcraft"
 # JBD (Jabrod)
 jbd-account = { path = "crates/jbd-account" }
 jbd-director = { path = "crates/jbd-director" }
+jbd-art = { path = "crates/jbd-art" }
 # internal
 filmcraft-time = { path = "crates/time" }
 filmcraft-geom = { path = "crates/geom" }

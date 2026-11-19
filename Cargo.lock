@@ -3311,6 +3311,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "jbd-art"
+version = "1.3.0"
+dependencies = [
+ "jbd-account",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "jbd-director"
 version = "1.3.0"
 dependencies = [
